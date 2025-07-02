@@ -13,10 +13,37 @@ class LoginScreen extends StatelessWidget {
         child: Stack(
           children: [
             cajaarriba(size),
-            iconousuario(),
             cajalogin(size, context),
+            logoescuela(size),
           ],
         ),
+      ),
+    );
+  }
+
+  SafeArea logoescuela(Size size) {
+    return SafeArea(
+      child: Column(
+        children: [
+          SizedBox(
+            height: size.height * 0.05,
+          ), //espacio entre la parte superior y el icono
+          Container(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                //separar el logo de la parte superior
+                SizedBox(
+                  height: size.height * 0.15, //altura del icono
+                  child: Image.network(
+                    'https://upload.wikimedia.org/wikipedia/commons/c/ca/TSJZapopan_Logo.jpg',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -129,21 +156,6 @@ class LoginScreen extends StatelessWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ],
-      ),
-    );
-  }
-
-  SafeArea iconousuario() {
-    return SafeArea(
-      //espacio para evitar que el icono se superponga con la barra de estado
-      child: Container(
-        margin: EdgeInsets.only(top: 30),
-        width: double.infinity,
-        child: Icon(
-          Icons.person_pin,
-          size: 100,
-          color: Colors.white,
-        ), //icono de usuario con caracteristicas
       ),
     );
   }
