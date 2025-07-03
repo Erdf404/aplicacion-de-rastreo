@@ -8,7 +8,7 @@ class OpcionesRondines extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return Scaffold(
-      body: Container(
+      body: SizedBox(
         width: double.infinity,
         height: double.infinity,
         child: Stack(
@@ -105,10 +105,7 @@ class OpcionesRondines extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   onPressed: () {
-                    Navigator.pushReplacementNamed(
-                      context,
-                      'login',
-                    ); //cambiar para que suba los rondines
+                    Navigator.pushReplacementNamed(context, 'login');
                   },
                 ),
               ),
@@ -159,38 +156,36 @@ class OpcionesRondines extends StatelessWidget {
 
   SafeArea logoyusuario(Size size) {
     return SafeArea(
-      child: Container(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            SizedBox(
-              //logo de la escuela
-              height: size.height * 0.1,
-              width: size.width * 0.5,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            //logo de la escuela
+            height: size.height * 0.1,
+            width: size.width * 0.5,
 
-              child: Image.network(
-                'https://upload.wikimedia.org/wikipedia/commons/c/ca/TSJZapopan_Logo.jpg',
-                fit: BoxFit.cover,
-              ),
+            child: Image.network(
+              'https://upload.wikimedia.org/wikipedia/commons/c/ca/TSJZapopan_Logo.jpg',
+              fit: BoxFit.cover,
             ),
-            SizedBox(
-              //nombre del usuario
-              height: size.height * 0.1,
-              width: size.width * 0.4,
-              child: Center(
-                child: Text(
-                  textAlign: TextAlign.center,
-                  'Nombre del usuario',
-                  style: TextStyle(
-                    color: const Color.fromARGB(255, 144, 30, 30),
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+          ),
+          SizedBox(
+            //nombre del usuario
+            height: size.height * 0.1,
+            width: size.width * 0.4,
+            child: Center(
+              child: Text(
+                textAlign: TextAlign.center,
+                'Nombre del usuario',
+                style: TextStyle(
+                  color: const Color.fromARGB(255, 144, 30, 30),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
