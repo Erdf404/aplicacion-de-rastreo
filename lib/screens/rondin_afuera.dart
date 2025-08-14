@@ -37,124 +37,133 @@ class _RondinAfueraState extends State<RondinAfuera> {
                         'opciones_rondines',
                       );
                     },
-                    child: Container(
-                      height: size.height * 0.25,
-                      width: size.height * 0.25,
-                      decoration: BoxDecoration(
-                        color: Colors.blue[300],
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue.shade500,
-                            offset: Offset(5, 5),
-                            blurRadius: 15,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                        gradient: LinearGradient(
-                          colors: [Colors.blue.shade200, Colors.blue.shade700],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Iniciar\nMarcar punto',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
+                    child: botondeiniciar(size),
                   ),
                 ),
                 SizedBox(height: size.height * 0.05),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  margin: const EdgeInsets.symmetric(horizontal: 40),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey, width: 1.0),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          child: Text(
-                            'Puntos registrados:',
-                            style: TextStyle(
-                              color: Color.fromARGB(255, 33, 30, 30),
-                              fontSize: 16,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: SizedBox(
-                          child: Text(
-                            '$contador',
-                            style: TextStyle(
-                              color: Color.fromARGB(255, 33, 30, 30),
-                              fontSize: 16,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                contadordepuntos(),
                 SizedBox(height: size.height * 0.05),
-                MaterialButton(
-                  height: size.height * 0.07,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  color: const Color.fromARGB(255, 85, 20, 198),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                    child: Text(
-                      'Finalizar rondin',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, 'rondin_afuera');
-                  },
-                ),
+                botondeterminar(size, context),
                 SizedBox(
                   height: size.height * 0.15,
                 ), //espacio entre los botones y el fondo
-                MaterialButton(
-                  height: size.height * 0.07,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  color: const Color.fromARGB(255, 85, 20, 198),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                    child: Text(
-                      'Regresar',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(
-                      context,
-                      'opciones_rondines',
-                    );
-                  },
-                ),
+                botondesalir(size, context),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  MaterialButton botondesalir(Size size, BuildContext context) {
+    return MaterialButton(
+      height: size.height * 0.07,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      color: const Color.fromARGB(255, 85, 20, 198),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+        child: Text(
+          'Regresar',
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
+      ),
+      onPressed: () {
+        Navigator.pushReplacementNamed(context, 'opciones_rondines');
+      },
+    );
+  }
+
+  MaterialButton botondeterminar(Size size, BuildContext context) {
+    return MaterialButton(
+      height: size.height * 0.07,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      color: const Color.fromARGB(255, 85, 20, 198),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+        child: Text(
+          'Finalizar rondin',
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
+      ),
+      onPressed: () {
+        Navigator.pushReplacementNamed(context, 'rondin_afuera');
+      },
+    );
+  }
+
+  Container contadordepuntos() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.symmetric(horizontal: 40),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey, width: 1.0),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: SizedBox(
+              child: Text(
+                'Puntos registrados:',
+                style: TextStyle(
+                  color: Color.fromARGB(255, 33, 30, 30),
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: SizedBox(
+              child: Text(
+                '$contador',
+                style: TextStyle(
+                  color: Color.fromARGB(255, 33, 30, 30),
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Container botondeiniciar(Size size) {
+    return Container(
+      height: size.height * 0.25,
+      width: size.height * 0.25,
+      decoration: BoxDecoration(
+        color: Colors.blue[300],
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.shade500,
+            offset: Offset(5, 5),
+            blurRadius: 15,
+            spreadRadius: 1,
+          ),
+        ],
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade200, Colors.blue.shade700],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Text(
+          'Iniciar\nMarcar punto',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );
@@ -176,12 +185,13 @@ class _RondinAfueraState extends State<RondinAfuera> {
           SizedBox(
             height: size.height * 0.1,
             width: size.width * 0.4,
+
             child: const Center(
               child: Text(
                 textAlign: TextAlign.center,
-                'Nombre del usuario',
+                'Rondin Exterior',
                 style: TextStyle(
-                  color: Color.fromARGB(255, 144, 30, 30),
+                  color: Color.fromARGB(255, 127, 30, 144),
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
