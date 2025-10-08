@@ -53,7 +53,7 @@ class OpcionesRondines extends StatelessWidget {
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
                   child: Text(
-                    'Rondin aire libre',
+                    'Rondin exterior',
                     style: TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ),

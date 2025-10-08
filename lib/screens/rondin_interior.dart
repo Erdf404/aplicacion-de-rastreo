@@ -90,42 +90,30 @@ class _RondinInteriorState extends State<RondinInterior> {
 
   Container RegistroDePuntos() {
     return Container(
-      padding: const EdgeInsets.all(10),
-      margin: const EdgeInsets.symmetric(horizontal: 30),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey, width: 1.0),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: SizedBox(
-              child: Text(
-                'Lugares registrados:',
-                style: TextStyle(
-                  color: Color.fromARGB(255, 33, 30, 30),
-                  fontSize: 16,
+      child: ElevatedButton(
+        child: const Text("Rondas asignadas"),
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            builder: (BuildContext context) {
+              return SizedBox(
+                height: 400,
+                child: ListView.builder(
+                  itemCount: 10, // Número de rondas disponibles
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text('Ronda ${index + 1}'),
+                      onTap: () {
+                        // Acción al seleccionar una ronda
+                        Navigator.pop(context); // Cerrar el modal
+                      },
+                    );
+                  },
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: SizedBox(
-              child: Text(
-                '$contador',
-                style: TextStyle(
-                  color: Color.fromARGB(255, 33, 30, 30),
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ],
+              );
+            },
+          );
+        },
       ),
     );
   }

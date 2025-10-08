@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 
 class RondinAfuera extends StatefulWidget {
   const RondinAfuera({super.key});
@@ -7,12 +9,58 @@ class RondinAfuera extends StatefulWidget {
   State<RondinAfuera> createState() => _RondinAfueraState();
 }
 
+class PuntoRondin {
+  final DateTime tiempo;
+  final double latitud;
+  final double longitud;
+
+  PuntoRondin({
+    required this.tiempo,
+    required this.latitud,
+    required this.longitud,
+  });
+}
+
 class _RondinAfueraState extends State<RondinAfuera> {
-  int contador = 0;
+  List<PuntoRondin> puntos = [];
+  DateTime? primerTiempo;
+  DateTime? ultimoTiempo;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPermission();
+    });
+    _checkPermission();
+  }
+
+  Future<void> _checkPermission() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      await Geolocator.openLocationSettings();
+      return;
+    }
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print("Permiso denegado");
+        return;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      print(
+        "Permiso denegado permanentemente. Abra la configuracion para cambiarlo manualmente",
+      );
+      await Geolocator.openAppSettings();
+      return;
+    }
+  }
+
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+
     return Scaffold(
       body: SizedBox(
         width: double.infinity,
@@ -26,22 +74,48 @@ class _RondinAfueraState extends State<RondinAfuera> {
                 Align(
                   alignment: Alignment.topCenter,
                   child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        contador++;
-                      });
+                    //boton de marcar punto
+                    onTap: () async {
+                      try {
+                        // Intentar obtener la posición con un límite de 5 segundos
+                        Position position = await Geolocator.getCurrentPosition(
+                          desiredAccuracy: LocationAccuracy.high,
+                          timeLimit: const Duration(
+                            seconds:
+                                5, //tiempo maximo para obtener la ubicacion
+                          ),
+                        );
 
-                      // Acción del botón
-                      Navigator.pushReplacementNamed(
-                        context,
-                        'opciones_rondines',
-                      );
+                        setState(() {
+                          DateTime ahora = DateTime.now();
+                          primerTiempo ??= ahora;
+                          ultimoTiempo = ahora;
+                          puntos.add(
+                            PuntoRondin(
+                              tiempo: ahora,
+                              latitud: position.latitude,
+                              longitud: position.longitude,
+                            ),
+                          );
+                        });
+
+                        print("Punto guardado");
+                      } catch (e) {
+                        // Si no se obtiene la ubicación a tiempo o hay error
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'No se pudo obtener la ubicación a tiempo.',
+                            ),
+                          ),
+                        );
+                      }
                     },
                     child: botondeiniciar(size),
                   ),
                 ),
                 SizedBox(height: size.height * 0.05),
-                contadordepuntos(),
+                selectorrondas(),
                 SizedBox(height: size.height * 0.05),
                 botondeterminar(size, context),
                 SizedBox(
@@ -60,7 +134,7 @@ class _RondinAfueraState extends State<RondinAfuera> {
     return MaterialButton(
       height: size.height * 0.07,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      color: const Color.fromARGB(255, 85, 20, 198),
+      color: const Color.fromARGB(255, 198, 20, 59),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
         child: Text(
@@ -87,49 +161,110 @@ class _RondinAfueraState extends State<RondinAfuera> {
         ),
       ),
       onPressed: () {
-        Navigator.pushReplacementNamed(context, 'rondin_afuera');
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text("Tiempos marcados"),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Inicio: ${primerTiempo != null ? DateFormat('dd MMM yyyy HH:mm').format(primerTiempo!) : '--:--'}  "
+                      "Fin: ${ultimoTiempo != null ? DateFormat('dd MMM yyyy HH:mm').format(ultimoTiempo!) : '--:--'}",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    Expanded(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: puntos.length,
+                        itemBuilder: (context, index) {
+                          final punto = puntos[index];
+                          final horaFormateada = DateFormat(
+                            'HH:mm',
+                          ).format(punto.tiempo);
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Text(
+                              "${index + 1}. Hora: $horaFormateada\n"
+                              "Lat: ${punto.latitud.toStringAsFixed(3)}, "
+                              "Lng: ${punto.longitud.toStringAsFixed(3)}",
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    for (var puntos in puntos) {
+                      print(
+                        "Hora: ${puntos.tiempo}, Latitud: ${puntos.latitud}, Longitud: ${puntos.longitud}",
+                      );
+                    }
+                    setState(() {
+                      puntos.clear();
+                      primerTiempo = null;
+                      ultimoTiempo = null;
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: Text("Aceptar"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+
+                  child: Text("continuar"),
+                ),
+              ],
+            );
+          },
+        );
       },
     );
   }
 
-  Container contadordepuntos() {
+  Container selectorrondas() {
     return Container(
-      padding: const EdgeInsets.all(10),
-      margin: const EdgeInsets.symmetric(horizontal: 40),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey, width: 1.0),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: SizedBox(
-              child: Text(
-                'Puntos registrados:',
-                style: TextStyle(
-                  color: Color.fromARGB(255, 33, 30, 30),
-                  fontSize: 16,
+      child: ElevatedButton(
+        child: const Text("Rondas asignadas"),
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            builder: (BuildContext context) {
+              return SizedBox(
+                height: 400,
+                child: ListView.builder(
+                  itemCount: 10, // Número de rondas disponibles
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text('Ronda ${index + 1}'),
+                      onTap: () {
+                        // Acción al seleccionar una ronda
+                        Navigator.pop(context); // Cerrar el modal
+                      },
+                    );
+                  },
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: SizedBox(
-              child: Text(
-                '$contador',
-                style: TextStyle(
-                  color: Color.fromARGB(255, 33, 30, 30),
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ],
+              );
+            },
+          );
+        },
       ),
     );
   }

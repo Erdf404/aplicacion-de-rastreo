@@ -152,7 +152,7 @@ class LoginScreen extends StatelessWidget {
           ),
           SizedBox(height: 50),
           Text(
-            'Recuperar contraseña',
+            'Para recuperar la contraseña\n pidesela a tu administrador',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ],
