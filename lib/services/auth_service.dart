@@ -152,6 +152,7 @@ class AuthService {
           "id_usuario": 1,
           "fecha_de_ejecucion": "2025-10-15",
           "hora_de_ejecucion": "2025-10-15T22:00:00",
+          "distancia_permitida": 10,
           "coordenadas": [
             {"id_coordenada_admin": 1, "orden": 1},
             {"id_coordenada_admin": 2, "orden": 2},

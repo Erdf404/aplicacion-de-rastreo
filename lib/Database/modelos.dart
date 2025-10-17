@@ -31,7 +31,7 @@ class Usuario {
   final int idTipo;
   final String nombre;
   final String
-  contrasena; // No se debemos almacenar en texto plano cuandto se termine
+  contrasena; // No la debemos almacenar en texto plano cuandto se termine
   final String? correo;
 
   Usuario({
@@ -170,6 +170,7 @@ class RondaAsignada {
   final int idUsuario;
   final String fechaDeEjecucion; // Formato: "2025-10-14"
   final String horaDeEjecucion; // Formato: "2025-10-14T22:00:00"
+  final int distanciaPermitida;
 
   RondaAsignada({
     required this.idRondaAsignada,
@@ -177,6 +178,7 @@ class RondaAsignada {
     required this.idUsuario,
     required this.fechaDeEjecucion,
     required this.horaDeEjecucion,
+    required this.distanciaPermitida,
   });
 
   Map<String, dynamic> toMap() {
@@ -186,6 +188,7 @@ class RondaAsignada {
       'id_usuario': idUsuario,
       'fecha_de_ejecucion': fechaDeEjecucion,
       'hora_de_ejecucion': horaDeEjecucion,
+      'distancia_permitida': distanciaPermitida,
     };
   }
 
@@ -196,6 +199,7 @@ class RondaAsignada {
       idUsuario: map['id_usuario'] as int,
       fechaDeEjecucion: map['fecha_de_ejecucion'] as String,
       horaDeEjecucion: map['hora_de_ejecucion'] as String,
+      distanciaPermitida: map['distancia_permitida'] as int,
     );
   }
 
@@ -206,6 +210,7 @@ class RondaAsignada {
       idUsuario: json['id_usuario'] as int,
       fechaDeEjecucion: json['fecha_de_ejecucion'] as String,
       horaDeEjecucion: json['hora_de_ejecucion'] as String,
+      distanciaPermitida: json['distancia_permitida'] as int,
     );
   }
 }
@@ -292,8 +297,8 @@ class CoordenadaUsuario {
   final int? id; // Nullable porque se genera automáticamente
   final int idRondaUsuario;
   final String horaActual; // Formato: "2025-10-14T22:15:00"
-  final double latitudActual;
-  final double longitudActual;
+  final double? latitudActual;
+  final double? longitudActual;
   final String? codigoQr; // Nullable, solo si escaneó QR
   final bool verificador; // true = QR válido, false = no válido o sin escanear
 
@@ -301,8 +306,8 @@ class CoordenadaUsuario {
     this.id,
     required this.idRondaUsuario,
     required this.horaActual,
-    required this.latitudActual,
-    required this.longitudActual,
+    this.latitudActual,
+    this.longitudActual,
     this.codigoQr,
     required this.verificador,
   });
@@ -324,8 +329,8 @@ class CoordenadaUsuario {
       id: map['id'] as int?,
       idRondaUsuario: map['id_ronda_usuario'] as int,
       horaActual: map['hora_actual'] as String,
-      latitudActual: map['latitud_actual'] as double,
-      longitudActual: map['longitud_actual'] as double,
+      latitudActual: map['latitud_actual'] as double?,
+      longitudActual: map['longitud_actual'] as double?,
       codigoQr: map['codigo_qr'] as String?,
       verificador: map['verificador'] == 1,
     );

@@ -63,8 +63,8 @@ class RondasRepository {
 
   Future<int> registrarCoordenada({
     required int idRondaUsuario,
-    required double latitud,
-    required double longitud,
+    double? latitud,
+    double? longitud,
     String? codigoQrEscaneado,
     bool esValido = false,
   }) async {

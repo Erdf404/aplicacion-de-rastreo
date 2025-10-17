@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite/sqflite.dart';
 import '../services/user_session.dart';
 import '/database/repositories/rondas_repository.dart';
 import '/database/repositories/consultas_repository.dart';
 import '../database/modelos.dart';
+import '../database/database_helper.dart';
 
 class RondinAfuera extends StatefulWidget {
   const RondinAfuera({super.key});
@@ -22,6 +24,8 @@ class _RondinAfueraState extends State<RondinAfuera> {
   int? _idRondaUsuario;
   int? _idRondaAsignada;
   String? _nombreTipoRonda;
+  double _distanciaPermitida =
+      50.0; //distancia permitida en caso de no cargar de la base de datos
   List<Map<String, dynamic>> _checkpoints = [];
   List<CoordenadaUsuario> _coordenadasRegistradas = [];
 
@@ -46,6 +50,30 @@ class _RondinAfueraState extends State<RondinAfuera> {
       _idRondaAsignada = args['id_ronda_asignada'];
       _nombreTipoRonda = args['nombre_tipo_ronda'];
       _cargarCheckpoints();
+      _cargarDistanciaPermitida();
+    }
+  }
+
+  Future<void> _cargarDistanciaPermitida() async {
+    if (_idRondaAsignada == null) return;
+    try {
+      final db = await DatabaseHelper().database;
+
+      final result = await db.query(
+        'ronda_asignada',
+        columns: ['distancia_permitida'],
+        where: 'id_ronda_asignada = ?',
+        whereArgs: [_idRondaAsignada],
+        limit: 1,
+      );
+      if (result.isNotEmpty) {
+        setState(() {
+          _distanciaPermitida = (result.first['distancia_permitida'] as num)
+              .toDouble();
+        });
+      }
+    } catch (e) {
+      print('error al cargar distancia permitida: $e');
     }
   }
 
@@ -153,9 +181,8 @@ class _RondinAfueraState extends State<RondinAfuera> {
           checkpoint['longitud'],
         );
 
-        if (distancia <= 50) {
+        if (distancia <= _distanciaPermitida) {
           //distancia permitida al rededor del punto, cambiar a que se conecte a la base de datos
-
           estaCercaDeCheckpoint = true;
           idCheckpointCercano = checkpoint['id_coordenada_admin'];
           break;
@@ -171,7 +198,7 @@ class _RondinAfueraState extends State<RondinAfuera> {
       );
 
       if (estaCercaDeCheckpoint) {
-        _mostrarMensaje('✅ Checkpoint verificado', Colors.green);
+        _mostrarMensaje(' Checkpoint verificado', Colors.green);
       } else {
         _mostrarMensaje(
           '⚠️ No estás cerca de ningún checkpoint',

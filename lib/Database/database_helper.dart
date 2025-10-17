@@ -119,6 +119,7 @@ class DatabaseHelper {
         id_usuario INTEGER NOT NULL,
         fecha_de_ejecucion TEXT NOT NULL,
         hora_de_ejecucion TEXT NOT NULL,
+        distancia_permitida REAL NOT NULL,
         FOREIGN KEY (id_tipo) REFERENCES Tipo_ronda(id_tipo),
         FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
       )
@@ -164,8 +165,8 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         id_ronda_usuario INTEGER NOT NULL,
         hora_actual TEXT NOT NULL,
-        latitud_actual REAL NOT NULL,
-        longitud_actual REAL NOT NULL,
+        latitud_actual REAL,
+        longitud_actual REAL,
         codigo_qr TEXT,
         verificador INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (id_ronda_usuario) REFERENCES rondas_usuarios(id_ronda_usuario)

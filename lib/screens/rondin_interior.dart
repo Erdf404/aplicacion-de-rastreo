@@ -123,7 +123,7 @@ class _RondinInteriorState extends State<RondinInterior> {
 
       if (idCoordenada == null) {
         setState(() => _cargando = false);
-        _mostrarError('❌ Código QR no válido');
+        _mostrarError('Código QR no válido');
         return;
       }
 
@@ -135,7 +135,7 @@ class _RondinInteriorState extends State<RondinInterior> {
 
       if (!perteneceARonda) {
         setState(() => _cargando = false);
-        _mostrarError('❌ Este QR no pertenece a esta ronda');
+        _mostrarError('Este QR no pertenece a esta ronda');
         return;
       }
 
@@ -146,7 +146,7 @@ class _RondinInteriorState extends State<RondinInterior> {
 
       if (yaEscaneado) {
         setState(() => _cargando = false);
-        _mostrarError('⚠️ Ya escaneaste este checkpoint');
+        _mostrarError('Ya escaneaste este checkpoint');
         return;
       }
 
@@ -209,7 +209,7 @@ class _RondinInteriorState extends State<RondinInterior> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('🎉 ¡Todos los checkpoints verificados!'),
+        title: const Text('¡Todos los checkpoints verificados!'),
         content: const Text(
           'Has completado todos los puntos de la ronda.\n'
           '¿Deseas finalizar la ronda ahora?',

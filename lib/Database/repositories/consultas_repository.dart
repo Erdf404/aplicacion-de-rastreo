@@ -1,7 +1,3 @@
-// consultas_repository.dart
-// Repositorio para consultas complejas con JOINs
-// Usado principalmente para mostrar información en la UI
-
 import 'package:sqflite/sqflite.dart';
 import '../database_helper.dart';
 
@@ -260,42 +256,6 @@ class ConsultasRepository {
     );
 
     return result.isNotEmpty;
-  }
-
-  // Encuentra checkpoints cercanos a una ubicación GPS
-
-  Future<List<Map<String, dynamic>>> obtenerCoordenadasCercanas({
-    required double latitud,
-    required double longitud,
-    double radio = 0.001, // Aproximadamente 100 metros
-  }) async {
-    final db = await _dbHelper.database;
-
-    // Búsqueda simple por rango (no es perfecta pero funciona)
-    final result = await db.rawQuery(
-      '''
-      SELECT 
-        ca.*,
-        q.codigo_qr,
-        ABS(ca.latitud - ?) + ABS(ca.longitud - ?) as distancia_aprox
-      FROM Coordenadas_admin ca
-      LEFT JOIN Qr q ON ca.id_coordenada_admin = q.id_coordenada_admin
-      WHERE ca.latitud BETWEEN ? AND ?
-        AND ca.longitud BETWEEN ? AND ?
-      ORDER BY distancia_aprox ASC
-      LIMIT 10
-    ''',
-      [
-        latitud,
-        longitud,
-        latitud - radio,
-        latitud + radio,
-        longitud - radio,
-        longitud + radio,
-      ],
-    );
-
-    return result;
   }
 
   // Obtiene datos completos del usuario con su tipo
