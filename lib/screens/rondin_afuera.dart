@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../services/user_session.dart';
+import '/database/repositories/rondas_repository.dart';
+import '/database/repositories/consultas_repository.dart';
+import '../database/modelos.dart';
 
 class RondinAfuera extends StatefulWidget {
   const RondinAfuera({super.key});
@@ -9,30 +14,39 @@ class RondinAfuera extends StatefulWidget {
   State<RondinAfuera> createState() => _RondinAfueraState();
 }
 
-class PuntoRondin {
-  final DateTime tiempo;
-  final double latitud;
-  final double longitud;
-
-  PuntoRondin({
-    required this.tiempo,
-    required this.latitud,
-    required this.longitud,
-  });
-}
-
 class _RondinAfueraState extends State<RondinAfuera> {
-  List<PuntoRondin> puntos = [];
-  DateTime? primerTiempo;
-  DateTime? ultimoTiempo;
+  final RondasRepository _rondasRepo = RondasRepository();
+  final ConsultasRepository _consultasRepo = ConsultasRepository();
+
+  // Datos de la ronda
+  int? _idRondaUsuario;
+  int? _idRondaAsignada;
+  String? _nombreTipoRonda;
+  List<Map<String, dynamic>> _checkpoints = [];
+  List<CoordenadaUsuario> _coordenadasRegistradas = [];
+
+  // Estado
+  bool _rondaIniciada = false;
+  bool _cargando = false;
+  DateTime? _horaInicio;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkPermission();
-    });
     _checkPermission();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Obtener informacion anterior desde seleccion_ronda
+    final args = ModalRoute.of(context)?.settings.arguments as Map?;
+    if (args != null && _idRondaAsignada == null) {
+      _idRondaAsignada = args['id_ronda_asignada'];
+      _nombreTipoRonda = args['nombre_tipo_ronda'];
+      _cargarCheckpoints();
+    }
   }
 
   Future<void> _checkPermission() async {
@@ -41,235 +55,457 @@ class _RondinAfueraState extends State<RondinAfuera> {
       await Geolocator.openLocationSettings();
       return;
     }
+
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        print("Permiso denegado");
+        _mostrarError('Permiso de ubicación denegado');
         return;
       }
     }
+
     if (permission == LocationPermission.deniedForever) {
-      print(
-        "Permiso denegado permanentemente. Abra la configuracion para cambiarlo manualmente",
+      _mostrarError(
+        'Permiso denegado permanentemente. Habilítalo en configuración',
       );
       await Geolocator.openAppSettings();
-      return;
     }
   }
 
+  Future<void> _cargarCheckpoints() async {
+    if (_idRondaAsignada == null) return;
+
+    setState(() => _cargando = true);
+
+    final checkpoints = await _consultasRepo.obtenerCheckpointsRondaAsignada(
+      _idRondaAsignada!,
+    );
+
+    setState(() {
+      _checkpoints = checkpoints;
+      _cargando = false;
+    });
+  }
+
+  Future<void> _iniciarRonda() async {
+    if (_idRondaAsignada == null) {
+      _mostrarError('No se ha seleccionado una ronda');
+      return;
+    }
+
+    setState(() => _cargando = true);
+
+    final userSession = Provider.of<UserSession>(context, listen: false);
+
+    try {
+      // Crear registro de ronda en la base de datos
+      final idRonda = await _rondasRepo.iniciarRonda(
+        idUsuario: userSession.idUsuario!,
+        idRondaAsignada: _idRondaAsignada!,
+        fechaHoraInicio: DateTime.now(),
+      );
+
+      // Actualizar sesión del usuario
+      userSession.iniciarRonda(
+        idRondaUsuario: idRonda,
+        idRondaAsignada: _idRondaAsignada!,
+        tipoRonda: 'exterior',
+      );
+
+      setState(() {
+        _idRondaUsuario = idRonda;
+        _rondaIniciada = true;
+        _horaInicio = DateTime.now();
+        _cargando = false;
+      });
+
+      _mostrarMensaje('Ronda iniciada correctamente', Colors.green);
+    } catch (e) {
+      setState(() => _cargando = false);
+      _mostrarError('Error al iniciar ronda: $e');
+    }
+  }
+
+  Future<void> _marcarPunto() async {
+    if (!_rondaIniciada) {
+      await _iniciarRonda();
+      return;
+    }
+
+    setState(() => _cargando = true);
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 5),
+      );
+
+      // Verifica si está cerca de algún checkpoint
+      bool estaCercaDeCheckpoint = false;
+      int? idCheckpointCercano;
+
+      for (var checkpoint in _checkpoints) {
+        final distancia = Geolocator.distanceBetween(
+          position.latitude,
+          position.longitude,
+          checkpoint['latitud'],
+          checkpoint['longitud'],
+        );
+
+        if (distancia <= 50) {
+          //distancia permitida al rededor del punto, cambiar a que se conecte a la base de datos
+
+          estaCercaDeCheckpoint = true;
+          idCheckpointCercano = checkpoint['id_coordenada_admin'];
+          break;
+        }
+      }
+
+      // Guardar con validación
+      await _rondasRepo.registrarCoordenada(
+        idRondaUsuario: _idRondaUsuario!,
+        latitud: position.latitude,
+        longitud: position.longitude,
+        esValido: estaCercaDeCheckpoint,
+      );
+
+      if (estaCercaDeCheckpoint) {
+        _mostrarMensaje('✅ Checkpoint verificado', Colors.green);
+      } else {
+        _mostrarMensaje(
+          '⚠️ No estás cerca de ningún checkpoint',
+          Colors.orange,
+        );
+      }
+
+      await _recargarCoordenadas();
+      setState(() => _cargando = false);
+    } catch (e) {
+      setState(() => _cargando = false);
+      _mostrarError('No se pudo obtener la ubicación');
+    }
+  }
+
+  Future<void> _recargarCoordenadas() async {
+    if (_idRondaUsuario == null) return;
+
+    final coordenadas = await _rondasRepo.obtenerCoordenadasRonda(
+      _idRondaUsuario!,
+    );
+
+    setState(() => _coordenadasRegistradas = coordenadas);
+  }
+
+  Future<void> _finalizarRonda() async {
+    if (_idRondaUsuario == null) return;
+
+    // Confirmar finalización
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Finalizar Ronda'),
+        content: Text(
+          'Se registraron ${_coordenadasRegistradas.length} puntos.\n'
+          '¿Deseas finalizar la ronda?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Finalizar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    setState(() => _cargando = true);
+
+    try {
+      // Actualizar hora final en la BD
+      await _rondasRepo.finalizarRonda(
+        idRondaUsuario: _idRondaUsuario!,
+        fechaHoraFinal: DateTime.now(),
+      );
+
+      // Limpiar sesión
+      final userSession = Provider.of<UserSession>(context, listen: false);
+      userSession.finalizarRonda();
+
+      setState(() => _cargando = false);
+
+      // Mostrar resumen
+      _mostrarDialogoResumen();
+    } catch (e) {
+      setState(() => _cargando = false);
+      _mostrarError('Error al finalizar ronda: $e');
+    }
+  }
+
+  void _mostrarDialogoResumen() {
+    final duracion = DateTime.now().difference(_horaInicio!);
+    final horas = duracion.inHours;
+    final minutos = duracion.inMinutes.remainder(60);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('🎉 Ronda Completada'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tipo: $_nombreTipoRonda'),
+            const SizedBox(height: 8),
+            Text('Puntos registrados: ${_coordenadasRegistradas.length}'),
+            const SizedBox(height: 8),
+            Text('Duración: ${horas}h ${minutos}m'),
+            const SizedBox(height: 8),
+            Text('Inicio: ${DateFormat('HH:mm').format(_horaInicio!)}'),
+            Text('Fin: ${DateFormat('HH:mm').format(DateTime.now())}'),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Cerrar diálogo
+              Navigator.pop(context); // Volver a opciones
+            },
+            child: const Text('Aceptar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    return Scaffold(
-      body: SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Stack(
+    return WillPopScope(
+      onWillPop: () async {
+        if (_rondaIniciada) {
+          final salir = await _confirmarSalida();
+          return salir ?? false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        body: Stack(
           children: [
-            logousername(size),
-            Column(
-              children: [
-                SizedBox(height: size.height * 0.2),
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: GestureDetector(
-                    //boton de marcar punto
-                    onTap: () async {
-                      try {
-                        // Intentar obtener la posición con un límite de 5 segundos
-                        Position position = await Geolocator.getCurrentPosition(
-                          desiredAccuracy: LocationAccuracy.high,
-                          timeLimit: const Duration(
-                            seconds:
-                                5, //tiempo maximo para obtener la ubicacion
-                          ),
-                        );
+            SizedBox(
+              width: double.infinity,
+              height: double.infinity,
+              child: Stack(
+                children: [
+                  _logoyusuario(size),
+                  Column(
+                    children: [
+                      SizedBox(height: size.height * 0.2),
 
-                        setState(() {
-                          DateTime ahora = DateTime.now();
-                          primerTiempo ??= ahora;
-                          ultimoTiempo = ahora;
-                          puntos.add(
-                            PuntoRondin(
-                              tiempo: ahora,
-                              latitud: position.latitude,
-                              longitud: position.longitude,
-                            ),
-                          );
-                        });
+                      // Botón principal (marcar punto)
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: GestureDetector(
+                          onTap: _cargando ? null : _marcarPunto,
+                          child: _botondeiniciar(size),
+                        ),
+                      ),
 
-                        print("Punto guardado");
-                      } catch (e) {
-                        // Si no se obtiene la ubicación a tiempo o hay error
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'No se pudo obtener la ubicación a tiempo.',
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    child: botondeiniciar(size),
+                      SizedBox(height: size.height * 0.03),
+
+                      // Información de checkpoints
+                      _infoCheckpoints(),
+
+                      SizedBox(height: size.height * 0.03),
+
+                      // Lista de puntos registrados
+                      Expanded(child: _listaPuntosRegistrados()),
+
+                      // Botones de acción
+                      _botonesAccion(size),
+                    ],
                   ),
-                ),
-                SizedBox(height: size.height * 0.05),
-                selectorrondas(),
-                SizedBox(height: size.height * 0.05),
-                botondeterminar(size, context),
-                SizedBox(
-                  height: size.height * 0.15,
-                ), //espacio entre los botones y el fondo
-                botondesalir(size, context),
-              ],
+                ],
+              ),
             ),
+
+            // Overlay de carga
+            if (_cargando)
+              Container(
+                color: Colors.black54,
+                child: const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  MaterialButton botondesalir(Size size, BuildContext context) {
-    return MaterialButton(
-      height: size.height * 0.07,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      color: const Color.fromARGB(255, 198, 20, 59),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-        child: Text(
-          'Regresar',
-          style: TextStyle(color: Colors.white, fontSize: 18),
-        ),
+  Widget _infoCheckpoints() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      onPressed: () {
-        Navigator.pushReplacementNamed(context, 'opciones_rondines');
-      },
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildInfoItem(
+            icon: Icons.location_on,
+            label: 'Puntos',
+            value: '${_coordenadasRegistradas.length}',
+            color: Colors.blue,
+          ),
+          if (_checkpoints.isNotEmpty)
+            _buildInfoItem(
+              icon: Icons.check_circle,
+              label: 'Checkpoints',
+              value: '${_checkpoints.length}',
+              color: Colors.green,
+            ),
+          if (_rondaIniciada && _horaInicio != null)
+            _buildInfoItem(
+              icon: Icons.access_time,
+              label: 'Inicio',
+              value: DateFormat('HH:mm').format(_horaInicio!),
+              color: Colors.orange,
+            ),
+        ],
+      ),
     );
   }
 
-  MaterialButton botondeterminar(Size size, BuildContext context) {
-    return MaterialButton(
-      height: size.height * 0.07,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      color: const Color.fromARGB(255, 85, 20, 198),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-        child: Text(
-          'Finalizar rondin',
-          style: TextStyle(color: Colors.white, fontSize: 18),
+  Widget _buildInfoItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 30),
+        const SizedBox(height: 5),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
-      ),
-      onPressed: () {
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text("Tiempos marcados"),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Inicio: ${primerTiempo != null ? DateFormat('dd MMM yyyy HH:mm').format(primerTiempo!) : '--:--'}  "
-                      "Fin: ${ultimoTiempo != null ? DateFormat('dd MMM yyyy HH:mm').format(ultimoTiempo!) : '--:--'}",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      ],
+    );
+  }
 
-                    Expanded(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: puntos.length,
-                        itemBuilder: (context, index) {
-                          final punto = puntos[index];
-                          final horaFormateada = DateFormat(
-                            'HH:mm',
-                          ).format(punto.tiempo);
+  Widget _listaPuntosRegistrados() {
+    if (_coordenadasRegistradas.isEmpty) {
+      return const Center(
+        child: Text(
+          'No hay puntos registrados',
+          style: TextStyle(color: Colors.grey, fontSize: 16),
+        ),
+      );
+    }
 
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4.0),
-                            child: Text(
-                              "${index + 1}. Hora: $horaFormateada\n"
-                              "Lat: ${punto.latitud.toStringAsFixed(3)}, "
-                              "Lng: ${punto.longitud.toStringAsFixed(3)}",
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: _coordenadasRegistradas.length,
+      itemBuilder: (context, index) {
+        final coord = _coordenadasRegistradas[index];
+        final hora = DateTime.parse(coord.horaActual);
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 10),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue,
+              child: Text(
+                '${index + 1}',
+                style: const TextStyle(color: Colors.white),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () async {
-                    for (var puntos in puntos) {
-                      print(
-                        "Hora: ${puntos.tiempo}, Latitud: ${puntos.latitud}, Longitud: ${puntos.longitud}",
-                      );
-                    }
-                    setState(() {
-                      puntos.clear();
-                      primerTiempo = null;
-                      ultimoTiempo = null;
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: Text("Aceptar"),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-
-                  child: Text("continuar"),
-                ),
-              ],
-            );
-          },
+            ),
+            title: Text(DateFormat('HH:mm:ss').format(hora)),
+            subtitle: Text(
+              'Lat: ${coord.latitudActual.toStringAsFixed(6)}\n'
+              'Lng: ${coord.longitudActual.toStringAsFixed(6)}',
+              style: const TextStyle(fontSize: 12),
+            ),
+            trailing: const Icon(Icons.check_circle, color: Colors.green),
+          ),
         );
       },
     );
   }
 
-  Container selectorrondas() {
-    return Container(
-      child: ElevatedButton(
-        child: const Text("Rondas asignadas"),
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            builder: (BuildContext context) {
-              return SizedBox(
-                height: 400,
-                child: ListView.builder(
-                  itemCount: 10, // Número de rondas disponibles
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text('Ronda ${index + 1}'),
-                      onTap: () {
-                        // Acción al seleccionar una ronda
-                        Navigator.pop(context); // Cerrar el modal
-                      },
-                    );
-                  },
-                ),
-              );
+  Widget _botonesAccion(Size size) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          if (_rondaIniciada) ...[
+            MaterialButton(
+              height: size.height * 0.07,
+              minWidth: double.infinity,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              color: Colors.green,
+              onPressed: _cargando ? null : _finalizarRonda,
+              child: const Text(
+                'Finalizar Ronda',
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          MaterialButton(
+            height: size.height * 0.07,
+            minWidth: double.infinity,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            color: const Color.fromARGB(255, 198, 20, 59),
+            onPressed: () async {
+              if (_rondaIniciada) {
+                final salir = await _confirmarSalida();
+                if (salir == true && mounted) {
+                  Navigator.pop(context);
+                }
+              } else {
+                Navigator.pop(context);
+              }
             },
-          );
-        },
+            child: const Text(
+              'Regresar',
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Container botondeiniciar(Size size) {
+  Container _botondeiniciar(Size size) {
     return Container(
       height: size.height * 0.25,
       width: size.height * 0.25,
@@ -279,7 +515,7 @@ class _RondinAfueraState extends State<RondinAfuera> {
         boxShadow: [
           BoxShadow(
             color: Colors.blue.shade500,
-            offset: Offset(5, 5),
+            offset: const Offset(5, 5),
             blurRadius: 15,
             spreadRadius: 1,
           ),
@@ -290,11 +526,11 @@ class _RondinAfueraState extends State<RondinAfuera> {
           end: Alignment.bottomRight,
         ),
       ),
-      child: const Center(
+      child: Center(
         child: Text(
-          'Iniciar\nMarcar punto',
+          _rondaIniciada ? 'Marcar\nPunto' : 'Iniciar\nRonda',
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -304,7 +540,7 @@ class _RondinAfueraState extends State<RondinAfuera> {
     );
   }
 
-  SafeArea logousername(Size size) {
+  SafeArea _logoyusuario(Size size) {
     return SafeArea(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -320,14 +556,13 @@ class _RondinAfueraState extends State<RondinAfuera> {
           SizedBox(
             height: size.height * 0.1,
             width: size.width * 0.4,
-
-            child: const Center(
+            child: Center(
               child: Text(
                 textAlign: TextAlign.center,
-                'Rondin Exterior',
-                style: TextStyle(
+                _nombreTipoRonda ?? 'Rondín Exterior',
+                style: const TextStyle(
                   color: Color.fromARGB(255, 127, 30, 144),
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -336,5 +571,42 @@ class _RondinAfueraState extends State<RondinAfuera> {
         ],
       ),
     );
+  }
+
+  Future<bool?> _confirmarSalida() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ronda en curso'),
+        content: const Text(
+          'Tienes una ronda activa.\n¿Deseas salir sin finalizarla?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Salir'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarMensaje(String mensaje, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: color,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _mostrarError(String mensaje) {
+    _mostrarMensaje(mensaje, Colors.red);
   }
 }
