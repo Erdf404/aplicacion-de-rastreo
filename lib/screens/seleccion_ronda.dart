@@ -159,7 +159,7 @@ class _SeleccionRondaState extends State<SeleccionRonda> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      ronda['Ronda' + 'nombre_tipo_ronda'],
+                      ronda['nombre_tipo_ronda'],
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

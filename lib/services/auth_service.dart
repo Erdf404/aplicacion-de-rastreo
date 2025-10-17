@@ -119,8 +119,8 @@ class AuthService {
         "tipo_usuario": {"tipo_id": 2, "nombre_tipo_usuario": "Guardia"},
       },
       "tipos_ronda": [
-        {"id_tipo": 1, "nombre_tipo_ronda": "Exterior"},
-        {"id_tipo": 2, "nombre_tipo_ronda": "Interior"},
+        {"id_tipo": 1, "nombre_tipo_ronda": "Ronda exterior"},
+        {"id_tipo": 2, "nombre_tipo_ronda": "Ronda interior"},
       ],
       "coordenadas_admin": [
         {
@@ -199,7 +199,6 @@ class AuthService {
 
   // ============================================================================
   // LOGOUT
-  // ============================================================================
 
   /// Cierra la sesión del usuario
   /// Si borrarDatos es true, elimina toda la información local
@@ -214,10 +213,6 @@ class AuthService {
 
     userSession.cerrarSesion();
   }
-
-  // ============================================================================
-  // MÉTODOS AUXILIARES
-  // ============================================================================
 
   /// Valida que el JSON tenga la estructura esperada
   bool _validarEstructuraJSON(Map<String, dynamic> json) {
