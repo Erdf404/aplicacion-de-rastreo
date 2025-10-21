@@ -576,10 +576,10 @@ class _RondinInteriorState extends State<RondinInterior> {
     return Container(
       height: size.height * 0.25,
       width: size.height * 0.25,
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 200, 67, 205),
+      decoration: const BoxDecoration(
+        color: Color.fromARGB(255, 200, 67, 205),
         shape: BoxShape.circle,
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color.fromARGB(255, 187, 33, 243),
             offset: Offset(5, 5),
@@ -587,7 +587,7 @@ class _RondinInteriorState extends State<RondinInterior> {
             spreadRadius: 1,
           ),
         ],
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [
             Color.fromARGB(255, 214, 123, 226),
             Color.fromARGB(255, 185, 17, 200),
