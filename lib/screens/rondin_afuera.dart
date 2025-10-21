@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:sqflite/sqflite.dart';
 import '../services/user_session.dart';
 import '/database/repositories/rondas_repository.dart';
 import '/database/repositories/consultas_repository.dart';
@@ -171,7 +170,6 @@ class _RondinAfueraState extends State<RondinAfuera> {
 
       // Verifica si está cerca de algún checkpoint
       bool estaCercaDeCheckpoint = false;
-      int? idCheckpointCercano;
 
       for (var checkpoint in _checkpoints) {
         final distancia = Geolocator.distanceBetween(
@@ -182,9 +180,8 @@ class _RondinAfueraState extends State<RondinAfuera> {
         );
 
         if (distancia <= _distanciaPermitida) {
-          //distancia permitida al rededor del punto, cambiar a que se conecte a la base de datos
+          //todo: cambiar a que se conecte a la base de datos la distancia permitida
           estaCercaDeCheckpoint = true;
-          idCheckpointCercano = checkpoint['id_coordenada_admin'];
           break;
         }
       }
@@ -200,10 +197,7 @@ class _RondinAfueraState extends State<RondinAfuera> {
       if (estaCercaDeCheckpoint) {
         _mostrarMensaje(' Checkpoint verificado', Colors.green);
       } else {
-        _mostrarMensaje(
-          '⚠️ No estás cerca de ningún checkpoint',
-          Colors.orange,
-        );
+        _mostrarMensaje(' No estás cerca de ningún checkpoint', Colors.orange);
       }
 
       await _recargarCoordenadas();
@@ -461,23 +455,58 @@ class _RondinAfueraState extends State<RondinAfuera> {
         final coord = _coordenadasRegistradas[index];
         final hora = DateTime.parse(coord.horaActual);
 
+        // Determinar si fue verificado en un checkpoint
+        final esCheckpointValido = coord.verificador;
+
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
+          color: esCheckpointValido
+              ? Colors
+                    .green
+                    .shade50 // si es checkpoint valido, lo muestra de color verde
+              : Colors.white, // Blanco si no coincide con checkpoint
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.blue,
-              child: Text(
-                '${index + 1}',
-                style: const TextStyle(color: Colors.white),
+              backgroundColor: esCheckpointValido ? Colors.green : Colors.blue,
+              child: Icon(
+                esCheckpointValido ? Icons.check_circle : Icons.location_on,
+                color: Colors.white,
               ),
             ),
-            title: Text(DateFormat('HH:mm:ss').format(hora)),
+            title: Row(
+              children: [
+                Text(DateFormat('HH:mm:ss').format(hora)),
+                const SizedBox(width: 8),
+                if (esCheckpointValido)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Verificado',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             subtitle: Text(
               'Lat: ${coord.latitudActual?.toStringAsFixed(6) ?? 'N/A'}\n'
               'Lng: ${coord.longitudActual?.toStringAsFixed(6) ?? 'N/A'}',
               style: const TextStyle(fontSize: 12),
             ),
-            trailing: const Icon(Icons.check_circle, color: Colors.green),
+            trailing: Icon(
+              esCheckpointValido ? Icons.verified : Icons.info_outline,
+              color: esCheckpointValido ? Colors.green : Colors.grey,
+            ),
           ),
         );
       },
