@@ -473,8 +473,8 @@ class _RondinAfueraState extends State<RondinAfuera> {
             ),
             title: Text(DateFormat('HH:mm:ss').format(hora)),
             subtitle: Text(
-              'Lat: ${coord.latitudActual.toStringAsFixed(6)}\n'
-              'Lng: ${coord.longitudActual.toStringAsFixed(6)}',
+              'Lat: ${coord.latitudActual?.toStringAsFixed(6) ?? 'N/A'}\n'
+              'Lng: ${coord.longitudActual?.toStringAsFixed(6) ?? 'N/A'}',
               style: const TextStyle(fontSize: 12),
             ),
             trailing: const Icon(Icons.check_circle, color: Colors.green),
