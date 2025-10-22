@@ -100,14 +100,14 @@ class TipoRonda {
 
 class CoordenadaAdmin {
   final int idCoordenadaAdmin;
-  final double latitud;
-  final double longitud;
+  final double? latitud;
+  final double? longitud;
   final String nombreCoordenada;
 
   CoordenadaAdmin({
     required this.idCoordenadaAdmin,
-    required this.latitud,
-    required this.longitud,
+    this.latitud,
+    this.longitud,
     required this.nombreCoordenada,
   });
 
@@ -123,8 +123,12 @@ class CoordenadaAdmin {
   factory CoordenadaAdmin.fromMap(Map<String, dynamic> map) {
     return CoordenadaAdmin(
       idCoordenadaAdmin: map['id_coordenada_admin'] as int,
-      latitud: map['latitud'] as double,
-      longitud: map['longitud'] as double,
+      latitud: map['latitud'] != null
+          ? (map['latitud'] as num).toDouble()
+          : null,
+      longitud: map['longitud'] != null
+          ? (map['longitud'] as num).toDouble()
+          : null,
       nombreCoordenada: map['nombre_coordenada'] as String,
     );
   }
@@ -132,8 +136,12 @@ class CoordenadaAdmin {
   factory CoordenadaAdmin.fromJson(Map<String, dynamic> json) {
     return CoordenadaAdmin(
       idCoordenadaAdmin: json['id_coordenada_admin'] as int,
-      latitud: (json['latitud'] as num).toDouble(),
-      longitud: (json['longitud'] as num).toDouble(),
+      latitud: json['latitud'] != null
+          ? (json['latitud'] as num).toDouble()
+          : null,
+      longitud: json['longitud'] != null
+          ? (json['longitud'] as num).toDouble()
+          : null,
       nombreCoordenada: json['nombre_coordenada'] as String,
     );
   }
@@ -141,7 +149,7 @@ class CoordenadaAdmin {
 
 class Qr {
   final int idCoordenadaAdmin;
-  final String codigoQr;
+  final String? codigoQr;
 
   Qr({required this.idCoordenadaAdmin, required this.codigoQr});
 
@@ -152,14 +160,14 @@ class Qr {
   factory Qr.fromMap(Map<String, dynamic> map) {
     return Qr(
       idCoordenadaAdmin: map['id_coordenada_admin'] as int,
-      codigoQr: map['codigo_qr'] as String,
+      codigoQr: map['codigo_qr'] as String?,
     );
   }
 
   factory Qr.fromJson(Map<String, dynamic> json) {
     return Qr(
       idCoordenadaAdmin: json['id_coordenada_admin'] as int,
-      codigoQr: json['codigo_qr'] as String,
+      codigoQr: json['codigo_qr'] as String?,
     );
   }
 }

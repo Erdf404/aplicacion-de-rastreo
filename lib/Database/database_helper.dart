@@ -92,8 +92,8 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE Coordenadas_admin (
         id_coordenada_admin INTEGER PRIMARY KEY,
-        latitud REAL NOT NULL,
-        longitud REAL NOT NULL,
+        latitud REAL,
+        longitud REAL,
         nombre_coordenada TEXT NOT NULL
       )
     ''');
@@ -104,7 +104,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE Qr (
         id_coordenada_admin INTEGER PRIMARY KEY,
-        codigo_qr TEXT NOT NULL,
+        codigo_qr TEXT,
         FOREIGN KEY (id_coordenada_admin) REFERENCES Coordenadas_admin(id_coordenada_admin)
       )
     ''');

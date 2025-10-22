@@ -63,17 +63,26 @@ class SyncRepository {
           for (var coordJson in coordenadas) {
             // Guardar coordenada
             final coordenada = CoordenadaAdmin.fromJson(coordJson);
-            await txn.insert(
-              'Coordenadas_admin',
-              coordenada.toMap(),
-              conflictAlgorithm: ConflictAlgorithm.replace,
+
+            await txn.rawInsert(
+              '''
+      INSERT OR REPLACE INTO Coordenadas_admin 
+      (id_coordenada_admin, latitud, longitud, nombre_coordenada)
+      VALUES (?, ?, ?, ?)
+    ''',
+              [
+                coordenada.idCoordenadaAdmin,
+                coordenada.latitud,
+                coordenada.longitud,
+                coordenada.nombreCoordenada,
+              ],
             );
 
-            // Guardar QR asociado (si existe)
-            if (coordJson['qr'] != null) {
+            if (coordJson['qr'] != null &&
+                coordJson['qr']['codigo_qr'] != null) {
               final qr = Qr(
                 idCoordenadaAdmin: coordenada.idCoordenadaAdmin,
-                codigoQr: coordJson['qr']['codigo_qr'] as String,
+                codigoQr: coordJson['qr']['codigo_qr'] as String?,
               );
               await txn.insert(
                 'Qr',
