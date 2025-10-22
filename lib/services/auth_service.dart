@@ -150,7 +150,7 @@ class AuthService {
           "id_ronda_asignada": 1,
           "id_tipo": 1,
           "id_usuario": 1,
-          "fecha_de_ejecucion": "2025-10-15",
+          "fecha_de_ejecucion": "2025-10-22",
           "hora_de_ejecucion": "2025-10-15T22:00:00",
           "distancia_permitida": 10,
           "coordenadas": [
@@ -163,10 +163,23 @@ class AuthService {
           "id_ronda_asignada": 2,
           "id_tipo": 2,
           "id_usuario": 1,
-          "fecha_de_ejecucion": "2025-10-16",
+          "fecha_de_ejecucion": "2025-10-23",
           "hora_de_ejecucion": "2025-10-16T08:00:00",
+          "distancia_permitida": 20,
           "coordenadas": [
             {"id_coordenada_admin": 1, "orden": 1},
+            {"id_coordenada_admin": 3, "orden": 2},
+          ],
+        },
+        {
+          "id_ronda_asignada": 3,
+          "id_tipo": 1,
+          "id_usuario": 1,
+          "fecha_de_ejecucion": "2025-10-23",
+          "hora_de_ejecucion": "2025-10-16T20:00:00",
+          "distancia_permitida": 15,
+          "coordenadas": [
+            {"id_coordenada_admin": 2, "orden": 1},
             {"id_coordenada_admin": 3, "orden": 2},
           ],
         },

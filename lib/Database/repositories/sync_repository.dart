@@ -1,6 +1,7 @@
 // Repositorio encargado de sincronizar datos entre la nube y la base de datos local
 
 import 'package:sqflite/sqflite.dart';
+import 'package:intl/intl.dart';
 import '../database_helper.dart';
 import '../modelos.dart';
 
@@ -86,36 +87,56 @@ class SyncRepository {
         // 5. Guardar rondas asignadas y sus coordenadas
         if (jsonData['rondas_asignadas'] != null) {
           final List<dynamic> rondasAsignadas = jsonData['rondas_asignadas'];
+
+          final hoy = DateTime.now();
+          final manana = hoy.add(const Duration(days: 1));
+          final fechaHoy = DateFormat('yyyy-MM-dd').format(hoy);
+          final fechaManana = DateFormat('yyyy-MM-dd').format(manana);
+
+          print('Filtrando rondas: $fechaHoy y $fechaManana');
+
           for (var rondaJson in rondasAsignadas) {
             // Guardar ronda asignada
             final ronda = RondaAsignada.fromJson(rondaJson);
-            await txn.insert(
-              'Ronda_asignada',
-              ronda.toMap(),
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
 
-            // Guardar coordenadas de esta ronda (tabla intermedia)
-            if (rondaJson['coordenadas'] != null) {
-              final List<dynamic> coordenadas = rondaJson['coordenadas'];
-              for (var coordJson in coordenadas) {
-                final rondaCoordenada = RondaCoordenada(
-                  idRondaAsignada: ronda.idRondaAsignada,
-                  idCoordenadaAdmin: coordJson['id_coordenada_admin'] as int,
-                  orden: coordJson['orden'] as int,
-                );
-                await txn.insert(
-                  'ronda_coordenadas',
-                  rondaCoordenada.toMap(),
-                  conflictAlgorithm: ConflictAlgorithm.replace,
-                );
+            if (ronda.fechaDeEjecucion == fechaHoy ||
+                ronda.fechaDeEjecucion == fechaManana) {
+              await txn.insert(
+                'Ronda_asignada',
+                ronda.toMap(),
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+
+              // Guardar coordenadas de esta ronda (tabla intermedia)
+              if (rondaJson['coordenadas'] != null) {
+                final List<dynamic> coordenadas = rondaJson['coordenadas'];
+                for (var coordJson in coordenadas) {
+                  final rondaCoordenada = RondaCoordenada(
+                    idRondaAsignada: ronda.idRondaAsignada,
+                    idCoordenadaAdmin: coordJson['id_coordenada_admin'] as int,
+                    orden: coordJson['orden'] as int,
+                  );
+                  await txn.insert(
+                    'ronda_coordenadas',
+                    rondaCoordenada.toMap(),
+                    conflictAlgorithm: ConflictAlgorithm.replace,
+                  );
+                }
               }
+
+              print(
+                'Ronda ${ronda.idRondaAsignada} guardada - ${ronda.fechaDeEjecucion}',
+              );
+            } else {
+              print(
+                'Ronda ${ronda.idRondaAsignada} ignorada - ${ronda.fechaDeEjecucion}',
+              );
             }
           }
         }
       });
 
-      return true; // Todo se guardó correctamente
+      return true;
     } catch (e) {
       // Si algo falló, imprime el error y retorna false
       print('Error al importar datos: $e');

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'package:aplicacion_rondines/services/user_session.dart';
 import 'package:aplicacion_rondines/screens/login_screen.dart';
 import 'package:aplicacion_rondines/screens/opciones_rondines.dart';
@@ -8,7 +9,18 @@ import 'package:aplicacion_rondines/screens/rondin_interior.dart';
 import 'package:aplicacion_rondines/screens/listado_rondines.dart';
 import 'package:aplicacion_rondines/screens/seleccion_ronda.dart';
 
-void main() => runApp(const MyApp());
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  //eliminar cuando se termine la app
+  final dbPath = join(await getDatabasesPath(), 'rondas_app.db');
+  await deleteDatabase(dbPath); // eliminar esta línea cuando se termine la app
+
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

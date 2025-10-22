@@ -170,7 +170,7 @@ class RondaAsignada {
   final int idUsuario;
   final String fechaDeEjecucion; // Formato: "2025-10-14"
   final String horaDeEjecucion; // Formato: "2025-10-14T22:00:00"
-  final int distanciaPermitida;
+  final double? distanciaPermitida;
 
   RondaAsignada({
     required this.idRondaAsignada,
@@ -178,7 +178,7 @@ class RondaAsignada {
     required this.idUsuario,
     required this.fechaDeEjecucion,
     required this.horaDeEjecucion,
-    required this.distanciaPermitida,
+    this.distanciaPermitida,
   });
 
   Map<String, dynamic> toMap() {
@@ -188,7 +188,7 @@ class RondaAsignada {
       'id_usuario': idUsuario,
       'fecha_de_ejecucion': fechaDeEjecucion,
       'hora_de_ejecucion': horaDeEjecucion,
-      'distancia_permitida': distanciaPermitida,
+      'distancia_permitida': distanciaPermitida ?? 50,
     };
   }
 
@@ -199,7 +199,9 @@ class RondaAsignada {
       idUsuario: map['id_usuario'] as int,
       fechaDeEjecucion: map['fecha_de_ejecucion'] as String,
       horaDeEjecucion: map['hora_de_ejecucion'] as String,
-      distanciaPermitida: map['distancia_permitida'] as int,
+      distanciaPermitida: map['distancia_permitida'] != null
+          ? (map['distancia_permitida'] as num).toDouble()
+          : 10.0,
     );
   }
 
@@ -210,7 +212,9 @@ class RondaAsignada {
       idUsuario: json['id_usuario'] as int,
       fechaDeEjecucion: json['fecha_de_ejecucion'] as String,
       horaDeEjecucion: json['hora_de_ejecucion'] as String,
-      distanciaPermitida: json['distancia_permitida'] as int,
+      distanciaPermitida: json['distancia_permitida'] != null
+          ? (json['distancia_permitida'] as num).toDouble()
+          : 10.0,
     );
   }
 }
