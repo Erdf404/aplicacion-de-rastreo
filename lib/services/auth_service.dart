@@ -125,15 +125,15 @@ class AuthService {
       "coordenadas_admin": [
         {
           "id_coordenada_admin": 1,
-          "latitud": 20.7539,
-          "longitud": -103.3917,
+          "latitud": 20.754105,
+          "longitud": -103.391785,
           "nombre_coordenada": "Entrada Principal",
           "qr": null,
         },
         {
           "id_coordenada_admin": 2,
-          "latitud": 20.6740,
-          "longitud": -103.3450,
+          "latitud": 10.674074,
+          "longitud": -103.391826,
           "nombre_coordenada": "Almacén 1",
           "qr": null,
         },
@@ -168,14 +168,14 @@ class AuthService {
         {
           "id_coordenada_admin": 7,
           "latitud": 20.6801,
-          "longitud": -103.3605,
+          "longitud": -103.360501,
           "nombre_coordenada": "Estacionamiento Norte",
           "qr": null,
         },
         {
           "id_coordenada_admin": 8,
           "latitud": 20.6812,
-          "longitud": -103.3620,
+          "longitud": -103.362022,
           "nombre_coordenada": "Jardines Exteriores",
           "qr": null,
         },
@@ -185,8 +185,8 @@ class AuthService {
           "id_ronda_asignada": 1,
           "id_tipo": 1,
           "id_usuario": 1,
-          "fecha_de_ejecucion": "2025-10-23",
-          "hora_de_ejecucion": "2025-10-15T22:00:00",
+          "fecha_de_ejecucion": "2025-10-31",
+          "hora_de_ejecucion": "2025-10-15T05:00:00",
           "distancia_permitida": 10,
           "coordenadas": [
             {"id_coordenada_admin": 1, "orden": 1},
@@ -198,7 +198,7 @@ class AuthService {
           "id_ronda_asignada": 2,
           "id_tipo": 2,
           "id_usuario": 1,
-          "fecha_de_ejecucion": "2025-10-22",
+          "fecha_de_ejecucion": "2025-10-31",
           "hora_de_ejecucion": "2025-10-16T08:00:00",
           "distancia_permitida": null,
           "coordenadas": [
@@ -210,9 +210,9 @@ class AuthService {
           "id_ronda_asignada": 3,
           "id_tipo": 1,
           "id_usuario": 1,
-          "fecha_de_ejecucion": "2025-10-23",
-          "hora_de_ejecucion": "2025-10-16T20:00:00",
-          "distancia_permitida": 15,
+          "fecha_de_ejecucion": "2025-11-01",
+          "hora_de_ejecucion": "2025-10-16T11:00:00",
+          "distancia_permitida": 10,
           "coordenadas": [
             {"id_coordenada_admin": 7, "orden": 1},
             {"id_coordenada_admin": 8, "orden": 2},
@@ -222,7 +222,7 @@ class AuthService {
           "id_ronda_asignada": 4,
           "id_tipo": 2,
           "id_usuario": 1,
-          "fecha_de_ejecucion": "2025-10-22",
+          "fecha_de_ejecucion": "2025-10-29",
           "hora_de_ejecucion": "2025-10-16T09:00:00",
           "distancia_permitida": null,
           "coordenadas": [

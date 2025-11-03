@@ -499,8 +499,8 @@ class _RondinAfueraState extends State<RondinAfuera> {
               ],
             ),
             subtitle: Text(
-              'Lat: ${coord.latitudActual?.toStringAsFixed(6) ?? 'N/A'}\n'
-              'Lng: ${coord.longitudActual?.toStringAsFixed(6) ?? 'N/A'}',
+              'Lat: ${coord.latitudActual?.toStringAsFixed(8) ?? 'N/A'}\n'
+              'Lng: ${coord.longitudActual?.toStringAsFixed(8) ?? 'N/A'}',
               style: const TextStyle(fontSize: 12),
             ),
             trailing: Icon(
