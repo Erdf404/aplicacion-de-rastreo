@@ -16,7 +16,6 @@ class RondinInterior extends StatefulWidget {
 }
 
 class _RondinInteriorState extends State<RondinInterior> {
-  // Repositories
   final RondasRepository _rondasRepo = RondasRepository();
   final ConsultasRepository _consultasRepo = ConsultasRepository();
 
@@ -27,7 +26,6 @@ class _RondinInteriorState extends State<RondinInterior> {
   List<Map<String, dynamic>> _checkpoints = [];
   List<CoordenadaUsuario> _coordenadasRegistradas = [];
 
-  // Estado
   bool _rondaIniciada = false;
   bool _cargando = false;
   DateTime? _horaInicio;
@@ -37,7 +35,6 @@ class _RondinInteriorState extends State<RondinInterior> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Obtener argumentos pasados desde seleccion_ronda
     final args = ModalRoute.of(context)?.settings.arguments as Map?;
     if (args != null && _idRondaAsignada == null) {
       _idRondaAsignada = args['id_ronda_asignada'];
@@ -101,10 +98,9 @@ class _RondinInteriorState extends State<RondinInterior> {
   }
 
   Future<void> _escanearQR() async {
-    // Si no se ha iniciado la ronda, iniciarla primero
     if (!_rondaIniciada) {
       await _iniciarRonda();
-      if (!_rondaIniciada) return; // Si falla, no continuar
+      if (!_rondaIniciada) return;
     }
 
     // Abrir escáner QR
@@ -179,7 +175,7 @@ class _RondinInteriorState extends State<RondinInterior> {
       );
 
       _mostrarMensaje(
-        '✅ ${checkpoint['nombre_coordenada']} verificado\n'
+        '${checkpoint['nombre_coordenada']} verificado\n'
         'Progreso: $_checkpointsVerificados/${_checkpoints.length}',
         Colors.green,
       );
@@ -269,13 +265,11 @@ class _RondinInteriorState extends State<RondinInterior> {
         fechaHoraFinal: DateTime.now(),
       );
 
-      // Limpiar sesión
       final userSession = Provider.of<UserSession>(context, listen: false);
       userSession.finalizarRonda();
 
       setState(() => _cargando = false);
 
-      // Mostrar resumen
       _mostrarDialogoResumen();
     } catch (e) {
       setState(() => _cargando = false);
@@ -295,7 +289,7 @@ class _RondinInteriorState extends State<RondinInterior> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('🎉 Ronda Completada'),
+        title: const Text('Ronda Completada'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,8 +311,8 @@ class _RondinInteriorState extends State<RondinInterior> {
         actions: [
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Cerrar diálogo
-              Navigator.pop(context); // Volver a opciones
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             child: const Text('Aceptar'),
           ),
@@ -352,7 +346,7 @@ class _RondinInteriorState extends State<RondinInterior> {
                     children: [
                       SizedBox(height: size.height * 0.2),
 
-                      // Botón principal (escanear QR)
+                      // Botón: escanear QR
                       Align(
                         alignment: Alignment.topCenter,
                         child: GestureDetector(
@@ -363,15 +357,12 @@ class _RondinInteriorState extends State<RondinInterior> {
 
                       SizedBox(height: size.height * 0.03),
 
-                      // Información de checkpoints
                       _infoCheckpoints(),
 
                       SizedBox(height: size.height * 0.03),
 
-                      // Lista de checkpoints
                       Expanded(child: _listaCheckpoints()),
 
-                      // Botones de acción
                       _botonesAccion(size),
                     ],
                   ),
@@ -379,7 +370,6 @@ class _RondinInteriorState extends State<RondinInterior> {
               ),
             ),
 
-            // Overlay de carga
             if (_cargando)
               Container(
                 color: Colors.black54,
@@ -629,10 +619,7 @@ class _RondinInteriorState extends State<RondinInterior> {
           SizedBox(
             height: size.height * 0.1,
             width: size.width * 0.5,
-            child: Image.network(
-              'https://upload.wikimedia.org/wikipedia/commons/c/ca/TSJZapopan_Logo.jpg',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/logo.jpg', fit: BoxFit.cover),
           ),
           SizedBox(
             height: size.height * 0.1,

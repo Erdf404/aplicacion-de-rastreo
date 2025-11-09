@@ -4,9 +4,6 @@ import '../database_helper.dart';
 class ConsultasRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  // Obtiene todas las rondas asignadas a un usuario
-  // Incluye: tipo de ronda, fecha, hora, cantidad de checkpoints
-
   Future<List<Map<String, dynamic>>> obtenerRondasAsignadas(
     int idUsuario,
   ) async {
@@ -35,8 +32,6 @@ class ConsultasRepository {
     return result;
   }
 
-  // Obtiene todos los checkpoints (coordenadas) de una ronda asignada
-
   Future<List<Map<String, dynamic>>> obtenerCheckpointsRondaAsignada(
     int idRondaAsignada,
   ) async {
@@ -49,12 +44,11 @@ class ConsultasRepository {
         ca.nombre_coordenada,
         ca.latitud,
         ca.longitud,
-        rc.orden,
-        q.codigo_qr
+        ca.codigo_qr,   
+        rc.orden
       FROM ronda_coordenadas rc
       INNER JOIN Coordenadas_admin ca 
         ON rc.id_coordenada_admin = ca.id_coordenada_admin
-      LEFT JOIN Qr q ON ca.id_coordenada_admin = q.id_coordenada_admin
       WHERE rc.id_ronda_asignada = ?
       ORDER BY rc.orden ASC
     ''',
@@ -63,9 +57,6 @@ class ConsultasRepository {
 
     return result;
   }
-
-  // Obtiene todas las rondas que ha ejecutado un usuario con información resumida
-  // Incluye: tipo, fecha, duración, checkpoints verificados
 
   Future<List<Map<String, dynamic>>> obtenerHistorialRondas(
     int idUsuario,
@@ -99,15 +90,11 @@ class ConsultasRepository {
     return result;
   }
 
-  // Información completa de una ronda específica ejecutada
-  // Incluye todas las coordenadas registradas con timestamps
-
   Future<Map<String, dynamic>?> obtenerDetalleRondaEjecutada(
     int idRondaUsuario,
   ) async {
     final db = await _dbHelper.database;
 
-    // Primero obtener información general de la ronda
     final rondaInfo = await db.rawQuery(
       '''
       SELECT 
@@ -128,7 +115,6 @@ class ConsultasRepository {
 
     if (rondaInfo.isEmpty) return null;
 
-    // Obtener coordenadas registradas
     final coordenadas = await db.rawQuery(
       '''
       SELECT 
@@ -137,25 +123,21 @@ class ConsultasRepository {
         ca.latitud as latitud_esperada,
         ca.longitud as longitud_esperada
       FROM coordenadas_usuarios cu
-      LEFT JOIN Qr q ON cu.codigo_qr = q.codigo_qr
       LEFT JOIN Coordenadas_admin ca 
-        ON q.id_coordenada_admin = ca.id_coordenada_admin
+        ON ca.codigo_qr = cu.codigo_qr  
       WHERE cu.id_ronda_usuario = ?
       ORDER BY cu.hora_actual ASC
     ''',
       [idRondaUsuario],
     );
 
-    // Combinar toda la información
     return {...rondaInfo.first, 'coordenadas': coordenadas};
   }
 
-  // Busca rondas ejecutadas en un rango de fechas
-
   Future<List<Map<String, dynamic>>> buscarRondasPorFecha({
     required int idUsuario,
-    required String fechaInicio, // Formato: "2025-10-01"
-    required String fechaFin, // Formato: "2025-10-31"
+    required String fechaInicio,
+    required String fechaFin,
   }) async {
     final db = await _dbHelper.database;
 
@@ -185,12 +167,9 @@ class ConsultasRepository {
     return result;
   }
 
-  // Retorna estadísticas generales del usuario
-
   Future<Map<String, dynamic>> obtenerEstadisticasUsuario(int idUsuario) async {
     final db = await _dbHelper.database;
 
-    // Total de rondas ejecutadas
     final totalRondas = await db.rawQuery(
       '''
       SELECT COUNT(*) as total
@@ -200,18 +179,17 @@ class ConsultasRepository {
       [idUsuario],
     );
 
-    // Total de checkpoints verificados
     final totalCheckpoints = await db.rawQuery(
       '''
       SELECT COUNT(*) as total
       FROM coordenadas_usuarios cu
-      INNER JOIN rondas_usuarios ru ON cu.id_ronda_usuario = ru.id_ronda_usuario
+      INNER JOIN rondas_usuarios ru 
+        ON cu.id_ronda_usuario = ru.id_ronda_usuario
       WHERE ru.id_usuario = ? AND cu.verificador = 1
     ''',
       [idUsuario],
     );
 
-    // Rondas asignadas pendientes
     final rondasPendientes = await db.rawQuery(
       '''
       SELECT COUNT(*) as total
@@ -223,7 +201,6 @@ class ConsultasRepository {
       [idUsuario],
     );
 
-    // Última ronda ejecutada
     final ultimaRonda = await db.rawQuery(
       '''
       SELECT fecha, hora_inicio
@@ -243,8 +220,6 @@ class ConsultasRepository {
     };
   }
 
-  // Verifica si una ronda asignada ya fue completada
-
   Future<bool> rondaYaEjecutada(int idRondaAsignada) async {
     final db = await _dbHelper.database;
 
@@ -257,8 +232,6 @@ class ConsultasRepository {
 
     return result.isNotEmpty;
   }
-
-  // Obtiene datos completos del usuario con su tipo
 
   Future<Map<String, dynamic>?> obtenerInfoUsuario(int idUsuario) async {
     final db = await _dbHelper.database;

@@ -55,7 +55,6 @@ class _SeleccionRondaState extends State<SeleccionRonda> {
               children: [
                 SizedBox(height: size.height * 0.15),
 
-                // Título
                 const Padding(
                   padding: EdgeInsets.all(20),
                   child: Text(
@@ -122,10 +121,7 @@ class _SeleccionRondaState extends State<SeleccionRonda> {
 
     // Determinar el tipo de ronda (exterior/interior)
 
-    final esExterior = ronda['nombre_tipo_ronda']
-        .toString()
-        .toLowerCase()
-        .contains('exterior');
+    final esExterior = ronda['id_tipo'] == 1;
 
     final icono = esExterior ? Icons.location_on : Icons.qr_code_scanner;
     final color = esExterior ? Colors.blue : Colors.purple;
@@ -141,7 +137,6 @@ class _SeleccionRondaState extends State<SeleccionRonda> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Icono
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -153,7 +148,6 @@ class _SeleccionRondaState extends State<SeleccionRonda> {
 
               const SizedBox(width: 15),
 
-              // Información
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +207,6 @@ class _SeleccionRondaState extends State<SeleccionRonda> {
                 ),
               ),
 
-              // Flecha
               Icon(Icons.arrow_forward_ios, color: color),
             ],
           ),
@@ -255,10 +248,7 @@ class _SeleccionRondaState extends State<SeleccionRonda> {
           SizedBox(
             height: size.height * 0.1,
             width: size.width * 0.5,
-            child: Image.network(
-              'https://upload.wikimedia.org/wikipedia/commons/c/ca/TSJZapopan_Logo.jpg',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/logo.jpg', fit: BoxFit.cover),
           ),
           SizedBox(
             height: size.height * 0.1,
@@ -281,7 +271,6 @@ class _SeleccionRondaState extends State<SeleccionRonda> {
   }
 
   void _seleccionarRonda(Map<String, dynamic> ronda, bool esExterior) {
-    // Navegar a la pantalla correspondiente pasando los datos
     final args = {
       'id_ronda_asignada': ronda['id_ronda_asignada'],
       'nombre_tipo_ronda': ronda['nombre_tipo_ronda'],

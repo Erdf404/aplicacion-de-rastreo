@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../services/user_session.dart';
 import '../Database/repositories/consultas_repository.dart';
 
@@ -104,7 +109,6 @@ class ListadoRondinesState extends State<ListadoRondines> {
 
                   const SizedBox(height: 20),
 
-                  // Botones
                   _buildBotones(context),
 
                   const SizedBox(height: 20),
@@ -304,10 +308,7 @@ class ListadoRondinesState extends State<ListadoRondines> {
           SizedBox(
             height: size.height * 0.1,
             width: size.width * 0.5,
-            child: Image.network(
-              'https://upload.wikimedia.org/wikipedia/commons/c/ca/TSJZapopan_Logo.jpg',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/logo.jpg', fit: BoxFit.cover),
           ),
           SizedBox(
             height: size.height * 0.1,
@@ -347,7 +348,6 @@ class ListadoRondinesState extends State<ListadoRondines> {
   }
 
   Future<void> _verDetalle(int idRondaUsuario) async {
-    // Mostrar loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -360,14 +360,13 @@ class ListadoRondinesState extends State<ListadoRondines> {
       );
 
       if (!mounted) return;
-      Navigator.pop(context); // Cerrar loading
+      Navigator.pop(context);
 
       if (detalle == null) {
         _mostrarError('No se encontró información de la ronda');
         return;
       }
 
-      // Mostrar diálogo
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -436,7 +435,7 @@ class ListadoRondinesState extends State<ListadoRondines> {
       );
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Cerrar loading
+        Navigator.pop(context);
         _mostrarError('Error al cargar detalle: $e');
       }
     }
@@ -461,7 +460,7 @@ class ListadoRondinesState extends State<ListadoRondines> {
     );
   }
 
-  void _generarReporte() {
+  Future<void> _generarReporte() async {
     final seleccionadas = _seleccionados.entries
         .where((e) => e.value)
         .map((e) => _rondasFiltradas[e.key])
@@ -472,22 +471,171 @@ class ListadoRondinesState extends State<ListadoRondines> {
       return;
     }
 
+    if (!mounted) return;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Generar Reporte'),
-        content: Text(
-          'Se generará un reporte con ${seleccionadas.length} ronda(s).\n\n'
-          'Esta funcionalidad estará disponible próximamente.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Entendido'),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
+
+    try {
+      final userSession = Provider.of<UserSession>(context, listen: false);
+      final usuario = await _consultasRepo.obtenerInfoUsuario(
+        userSession.idUsuario!,
+      );
+
+      List<Map<String, dynamic>> rondasDetalle = [];
+      for (var ronda in seleccionadas) {
+        final detalle = await _consultasRepo.obtenerDetalleRondaEjecutada(
+          ronda['id_ronda_usuario'],
+        );
+        if (detalle != null) {
+          rondasDetalle.add(detalle);
+        }
+      }
+
+      // Generar PDF
+      await _crearPDF(rondasDetalle, usuario, seleccionadas.length);
+
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      _mostrarMensaje('PDF generado y descargado exitosamente', Colors.green);
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      _mostrarError('Error al generar PDF: $e');
+    }
+  }
+
+  Future<void> _crearPDF(
+    List<Map<String, dynamic>> rondasDetalle,
+    Map<String, dynamic>? usuario,
+    int totalRondas,
+  ) async {
+    final pdf = pw.Document();
+    final logoBytes = await rootBundle.load('assets/logo.jpg');
+
+    for (int i = 0; i < rondasDetalle.length; i++) {
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.letter,
+          margin: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+          build: (context) => pw.Column(
+            children: [
+              pw.Center(
+                child: pw.Image(
+                  pw.MemoryImage(logoBytes.buffer.asUint8List()),
+                  height: 150,
+                ),
+              ),
+              pw.SizedBox(height: 30),
+
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text(
+                    'Realizado por: ${rondasDetalle[i]['nombre_usuario']?.isNotEmpty == true ? rondasDetalle[i]['nombre_usuario'] : 'N/A'}',
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 8),
+
+                  pw.Text(
+                    usuario?['correo'] ?? 'N/A',
+                    style: const pw.TextStyle(fontSize: 16),
+                  ),
+                  pw.SizedBox(height: 12),
+
+                  pw.Text(
+                    'Ronda realizada el día: ${_formatearFecha(rondasDetalle[i]['fecha'])}',
+                    style: const pw.TextStyle(fontSize: 16),
+                  ),
+                  pw.SizedBox(height: 12),
+
+                  pw.Text(
+                    'Con hora de inicio y final de: ${_formatearHora(rondasDetalle[i]['hora_inicio'])} - ${_formatearHora(rondasDetalle[i]['hora_final'])}',
+                    style: const pw.TextStyle(fontSize: 16),
+                  ),
+                  pw.SizedBox(height: 30),
+
+                  pw.Text(
+                    'Coordenadas Registradas:',
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.deepPurple,
+                    ),
+                  ),
+                  pw.SizedBox(height: 15),
+
+                  // Lista de coordenadas de la ronda
+                  if (((rondasDetalle[i]['coordenadas'] as List?) ?? [])
+                      .isNotEmpty)
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        for (var coord
+                            in (rondasDetalle[i]['coordenadas'] as List))
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.only(bottom: 10),
+                            child: pw.Text(
+                              '${_formatearHora(coord['hora_actual'])} - '
+                              '${coord['nombre_coordenada'] ?? 'Punto no asignado'} '
+                              '(Lat: ${(coord['latitud_actual'] as num?)?.toStringAsFixed(8) ?? 'N/A'}, '
+                              'Lng: ${(coord['longitud_actual'] as num?)?.toStringAsFixed(8) ?? 'N/A'})',
+                              style: const pw.TextStyle(fontSize: 15),
+                            ),
+                          ),
+                      ],
+                    )
+                  else
+                    pw.Text(
+                      'Sin coordenadas registradas.',
+                      style: const pw.TextStyle(
+                        fontSize: 15,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    await _guardarPDF(pdf, totalRondas);
+  }
+
+  Future<void> _guardarPDF(pw.Document pdf, int totalRondas) async {
+    try {
+      Directory? directory;
+
+      directory = await getDownloadsDirectory();
+
+      if (directory == null) {
+        directory = await getApplicationDocumentsDirectory();
+      }
+
+      if (directory == null) {
+        throw Exception('No se pudo acceder a ninguna carpeta');
+      }
+
+      final fecha = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final nombreArchivo = 'Reporte_Rondas${totalRondas}_$fecha.pdf';
+      final rutaArchivo = File('${directory.path}/$nombreArchivo');
+
+      final bytes = await pdf.save();
+      await rutaArchivo.writeAsBytes(bytes);
+
+      // Mostrar ruta donde se guardó el PDF generado
+      print('PDF guardado en: ${rutaArchivo.path}');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   String _formatearFecha(String fecha) {
@@ -513,5 +661,11 @@ class ListadoRondinesState extends State<ListadoRondines> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(mensaje), backgroundColor: Colors.red),
     );
+  }
+
+  void _mostrarMensaje(String mensaje, Color color) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(mensaje), backgroundColor: color));
   }
 }

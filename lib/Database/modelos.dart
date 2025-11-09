@@ -4,12 +4,10 @@ class TipoUsuario {
 
   TipoUsuario({required this.tipoId, required this.nombreTipoUsuario});
 
-  // Convierte el objeto a Map para insertarlo en la BD
   Map<String, dynamic> toMap() {
     return {'tipo_id': tipoId, 'nombre_tipo_usuario': nombreTipoUsuario};
   }
 
-  // Crea un objeto desde un Map (cuando lees de la BD)
   factory TipoUsuario.fromMap(Map<String, dynamic> map) {
     return TipoUsuario(
       tipoId: map['tipo_id'] as int,
@@ -17,11 +15,10 @@ class TipoUsuario {
     );
   }
 
-  // Crea un objeto desde JSON (cuando descargas de la nube)
   factory TipoUsuario.fromJson(Map<String, dynamic> json) {
     return TipoUsuario(
       tipoId: json['tipo_id'] as int,
-      nombreTipoUsuario: json['nombre_tipo_usuario'] as String,
+      nombreTipoUsuario: json['nombre_tipo_usuario']?.toString() ?? '',
     );
   }
 }
@@ -30,8 +27,7 @@ class Usuario {
   final int idUsuario;
   final int idTipo;
   final String nombre;
-  final String
-  contrasena; // No la debemos almacenar en texto plano cuandto se termine
+  final String contrasena;
   final String? correo;
 
   Usuario({
@@ -67,7 +63,7 @@ class Usuario {
       idUsuario: json['id_usuario'] as int,
       idTipo: json['id_tipo'] as int,
       nombre: json['nombre'] as String,
-      contrasena: json['contrasena'] as String,
+      contrasena: json['contrasena']?.toString() ?? '',
       correo: json['correo'] as String?,
     );
   }
@@ -93,7 +89,7 @@ class TipoRonda {
   factory TipoRonda.fromJson(Map<String, dynamic> json) {
     return TipoRonda(
       idTipo: json['id_tipo'] as int,
-      nombreTipoRonda: json['nombre_tipo_ronda'] as String,
+      nombreTipoRonda: json['nombre_tipo_ronda']?.toString() ?? '',
     );
   }
 }
@@ -103,12 +99,14 @@ class CoordenadaAdmin {
   final double? latitud;
   final double? longitud;
   final String nombreCoordenada;
+  final String? codigoQr;
 
   CoordenadaAdmin({
     required this.idCoordenadaAdmin,
     this.latitud,
     this.longitud,
     required this.nombreCoordenada,
+    this.codigoQr,
   });
 
   Map<String, dynamic> toMap() {
@@ -117,6 +115,7 @@ class CoordenadaAdmin {
       'latitud': latitud,
       'longitud': longitud,
       'nombre_coordenada': nombreCoordenada,
+      'codigo_qr': codigoQr,
     };
   }
 
@@ -130,6 +129,7 @@ class CoordenadaAdmin {
           ? (map['longitud'] as num).toDouble()
           : null,
       nombreCoordenada: map['nombre_coordenada'] as String,
+      codigoQr: map['codigo_qr'] as String?,
     );
   }
 
@@ -143,31 +143,7 @@ class CoordenadaAdmin {
           ? (json['longitud'] as num).toDouble()
           : null,
       nombreCoordenada: json['nombre_coordenada'] as String,
-    );
-  }
-}
-
-class Qr {
-  final int idCoordenadaAdmin;
-  final String? codigoQr;
-
-  Qr({required this.idCoordenadaAdmin, required this.codigoQr});
-
-  Map<String, dynamic> toMap() {
-    return {'id_coordenada_admin': idCoordenadaAdmin, 'codigo_qr': codigoQr};
-  }
-
-  factory Qr.fromMap(Map<String, dynamic> map) {
-    return Qr(
-      idCoordenadaAdmin: map['id_coordenada_admin'] as int,
-      codigoQr: map['codigo_qr'] as String?,
-    );
-  }
-
-  factory Qr.fromJson(Map<String, dynamic> json) {
-    return Qr(
-      idCoordenadaAdmin: json['id_coordenada_admin'] as int,
-      codigoQr: json['codigo_qr'] as String?,
+      codigoQr: json['codigo_qr']?.toString(),
     );
   }
 }
@@ -176,8 +152,8 @@ class RondaAsignada {
   final int idRondaAsignada;
   final int idTipo;
   final int idUsuario;
-  final String fechaDeEjecucion; // Formato: "2025-10-14"
-  final String horaDeEjecucion; // Formato: "2025-10-14T22:00:00"
+  final String fechaDeEjecucion;
+  final String horaDeEjecucion;
   final double? distanciaPermitida;
 
   RondaAsignada({
@@ -209,7 +185,7 @@ class RondaAsignada {
       horaDeEjecucion: map['hora_de_ejecucion'] as String,
       distanciaPermitida: map['distancia_permitida'] != null
           ? (map['distancia_permitida'] as num).toDouble()
-          : 10.0,
+          : 50.0,
     );
   }
 
@@ -222,7 +198,7 @@ class RondaAsignada {
       horaDeEjecucion: json['hora_de_ejecucion'] as String,
       distanciaPermitida: json['distancia_permitida'] != null
           ? (json['distancia_permitida'] as num).toDouble()
-          : 10.0,
+          : 50.0,
     );
   }
 }
@@ -230,7 +206,7 @@ class RondaAsignada {
 class RondaCoordenada {
   final int idRondaAsignada;
   final int idCoordenadaAdmin;
-  final int orden; // Orden en que debe visitarse el checkpoint
+  final int orden;
 
   RondaCoordenada({
     required this.idRondaAsignada,
@@ -264,12 +240,13 @@ class RondaCoordenada {
 }
 
 class RondaUsuario {
-  final int? idRondaUsuario; // Nullable porque se genera automáticamente
+  final int? idRondaUsuario;
   final int idUsuario;
   final int idRondaAsignada;
-  final String fecha; // Formato: "2025-10-14"
-  final String horaInicio; // Formato: "2025-10-14T22:00:00"
-  final String horaFinal; // Formato: "2025-10-14T23:30:00"
+  final String fecha;
+  final String horaInicio;
+  final String horaFinal;
+  final bool sincronizada;
 
   RondaUsuario({
     this.idRondaUsuario,
@@ -278,6 +255,7 @@ class RondaUsuario {
     required this.fecha,
     required this.horaInicio,
     required this.horaFinal,
+    this.sincronizada = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -288,6 +266,7 @@ class RondaUsuario {
       'fecha': fecha,
       'hora_inicio': horaInicio,
       'hora_final': horaFinal,
+      'sincronizada': sincronizada ? 1 : 0,
     };
   }
 
@@ -299,20 +278,30 @@ class RondaUsuario {
       fecha: map['fecha'] as String,
       horaInicio: map['hora_inicio'] as String,
       horaFinal: map['hora_final'] as String,
+      sincronizada: (map['sincronizada'] ?? 0) == 1,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id_ronda_usuario': idRondaUsuario,
+      'id_usuario': idUsuario,
+      'id_ronda_asignada': idRondaAsignada,
+      'fecha': fecha,
+      'hora_inicio': horaInicio,
+      'hora_final': horaFinal,
+    };
   }
 }
 
-// Tracking durante ronda
-
 class CoordenadaUsuario {
-  final int? id; // Nullable porque se genera automáticamente
+  final int? id;
   final int idRondaUsuario;
-  final String horaActual; // Formato: "2025-10-14T22:15:00"
+  final String horaActual;
   final double? latitudActual;
   final double? longitudActual;
-  final String? codigoQr; // Nullable, solo si escaneó QR
-  final bool verificador; // true = QR válido, false = no válido o sin escanear
+  final String? codigoQr;
+  final bool verificador;
 
   CoordenadaUsuario({
     this.id,

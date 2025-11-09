@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/user_session.dart';
+import '../services/sync_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,8 +18,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passController = TextEditingController();
 
   bool _isLoading = false;
-  bool _modoOffline =
-      true; // Cambiar a false cuando se tenga el backend y borrar la opción ofline
 
   @override
   void dispose() {
@@ -40,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
             _cajaarriba(size),
             _cajalogin(size, context),
             _logoescuela(size),
-            // Overlay de carga
+
             if (_isLoading)
               Container(
                 color: Colors.black54,
@@ -78,10 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               SizedBox(
                 height: size.height * 0.15,
-                child: Image.network(
-                  'https://upload.wikimedia.org/wikipedia/commons/c/ca/TSJZapopan_Logo.jpg',
-                  fit: BoxFit.cover,
-                ),
+                child: Image.asset('assets/logo.jpg', fit: BoxFit.cover),
               ),
             ],
           ),
@@ -120,7 +116,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     children: [
-                      // Campo de correo
                       TextFormField(
                         controller: _emailController,
                         autocorrect: false,
@@ -131,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         validator: (value) {
                           String pattern =
-                              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
+                              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'; // Expresión regular para validar correo
                           RegExp regExp = RegExp(pattern);
                           return regExp.hasMatch(value ?? '')
                               ? null
@@ -152,7 +147,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         obscureText: true,
                         validator: (value) {
-                          return (value != null && value.length >= 6)
+                          return (value != null &&
+                                  value.length >=
+                                      6) //valores minimos para la contraseña
                               ? null
                               : 'La contraseña es de mínimo 6 caracteres';
                         },
@@ -190,32 +187,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                         ),
                       ),
-
-                      // Switch para modo offline Eliminar cuando se tenga el backend
-                      if (_modoOffline) ...[
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.warning, color: Colors.orange),
-                              SizedBox(width: 8),
-                              Text(
-                                'Modo Offline (Desarrollo)',
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -257,24 +228,12 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      Map<String, dynamic> resultado;
-
-      // Login según modo
-      if (_modoOffline) {
-        // Modo offline (desarrollo)
-        resultado = await _authService.loginOffline(
-          correo: _emailController.text.trim(),
-          contrasena: _passController.text,
-          userSession: userSession,
-        );
-      } else {
-        // Modo online (producción)
-        resultado = await _authService.login(
-          correo: _emailController.text.trim(),
-          contrasena: _passController.text,
-          userSession: userSession,
-        );
-      }
+      //  Llamar directamente a login
+      final resultado = await _authService.login(
+        correo: _emailController.text.trim(),
+        contrasena: _passController.text,
+        userSession: userSession,
+      );
 
       setState(() => _isLoading = false);
 
@@ -283,7 +242,9 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           _mostrarMensaje('¡Bienvenido ${userSession.nombre}!', Colors.green);
 
-          // Navegar a opciones rondines
+          //  Sincronizar rondas pendientes después del login
+          _intentarSincronizacion(userSession.idUsuario!);
+
           Navigator.pushReplacementNamed(context, 'opciones_rondines');
         }
       } else {
@@ -298,8 +259,17 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        _mostrarMensaje('Error inesperado: ${e.toString()}', Colors.red);
+        _mostrarMensaje('Error de conexión: ${e.toString()}', Colors.red);
       }
+    }
+  }
+
+  Future<void> _intentarSincronizacion(int idUsuario) async {
+    try {
+      final syncService = SyncService();
+      await syncService.intentarSincronizacionAutomatica(idUsuario);
+    } catch (e) {
+      print('No se pudo sincronizar: $e');
     }
   }
 

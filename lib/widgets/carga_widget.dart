@@ -1,8 +1,5 @@
-// Widget reutilizable para mostrar estados de carga
-
 import 'package:flutter/material.dart';
 
-/// Widget simple de carga con mensaje
 class LoadingWidget extends StatelessWidget {
   final String mensaje;
 
@@ -26,7 +23,6 @@ class LoadingWidget extends StatelessWidget {
   }
 }
 
-/// Widget de carga con overlay (cubre toda la pantalla)
 class LoadingOverlay extends StatelessWidget {
   final String mensaje;
 

@@ -7,7 +7,7 @@ class SyncService {
   final RondasRepository _rondasRepo = RondasRepository();
   final ConsultasRepository _consultasRepo = ConsultasRepository();
 
-  static const String _baseUrl = 'https://tu-backend.com/api';
+  static const String _baseUrl = 'https://api-sistema-rondas.onrender.com/api';
 
   /// Sube todas las rondas ejecutadas localmente que no se han sincronizado
   /// Retorna: cantidad de rondas sincronizadas exitosamente
@@ -15,38 +15,36 @@ class SyncService {
     int idUsuario,
   ) async {
     try {
-      // 1. Obtener todas las rondas del usuario
-      final rondas = await _rondasRepo.obtenerRondasUsuario(idUsuario);
+      // Obtener SOLO las NO sincronizadas
+      final rondas = await _rondasRepo.obtenerRondasNoSincronizadas(idUsuario);
 
       if (rondas.isEmpty) {
         return {
           'success': true,
           'sincronizadas': 0,
-          'message': 'No hay rondas para sincronizar',
+          'message': 'No hay rondas pendientes para sincronizar',
         };
       }
 
       int sincronizadas = 0;
       List<String> errores = [];
 
-      // 2. Por cada ronda, obtener su detalle y subirla
       for (var ronda in rondas) {
         if (ronda.idRondaUsuario == null) continue;
 
         try {
-          // Obtener detalle completo (con coordenadas)
           final detalle = await _consultasRepo.obtenerDetalleRondaEjecutada(
             ronda.idRondaUsuario!,
           );
 
           if (detalle == null) continue;
 
-          // Subir al servidor
           final exito = await _subirRondaAlServidor(detalle);
 
           if (exito) {
+            //Marcar como sincronizada en BD local
+            await _rondasRepo.marcarRondaSincronizada(ronda.idRondaUsuario!);
             sincronizadas++;
-            // TODO: Marcar como sincronizada en BD local o algun mensaje de confirmación
           } else {
             errores.add('Ronda ${ronda.idRondaUsuario}');
           }

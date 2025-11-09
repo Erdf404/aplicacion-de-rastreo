@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../services/user_session.dart';
 import '/database/repositories/rondas_repository.dart';
 import '/database/repositories/consultas_repository.dart';
@@ -24,7 +25,7 @@ class _RondinAfueraState extends State<RondinAfuera> {
   int? _idRondaAsignada;
   String? _nombreTipoRonda;
   double _distanciaPermitida =
-      50.0; //distancia permitida en caso de no cargar de la base de datos
+      50.0; // si no carga de la base de datos, usar 50 metros por defecto para la distancia permitida
   List<Map<String, dynamic>> _checkpoints = [];
   List<CoordenadaUsuario> _coordenadasRegistradas = [];
 
@@ -32,6 +33,9 @@ class _RondinAfueraState extends State<RondinAfuera> {
   bool _rondaIniciada = false;
   bool _cargando = false;
   DateTime? _horaInicio;
+
+  int _cooldownRestante = 0;
+  Timer? _cooldownTimer;
 
   @override
   void initState() {
@@ -43,7 +47,6 @@ class _RondinAfueraState extends State<RondinAfuera> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Obtener informacion anterior desde seleccion_ronda
     final args = ModalRoute.of(context)?.settings.arguments as Map?;
     if (args != null && _idRondaAsignada == null) {
       _idRondaAsignada = args['id_ronda_asignada'];
@@ -155,6 +158,12 @@ class _RondinAfueraState extends State<RondinAfuera> {
   }
 
   Future<void> _marcarPunto() async {
+    //cooldown para presionar el boton
+    if (_cooldownRestante > 0) {
+      _mostrarError('Espera ${_cooldownRestante}s antes de marcar otro punto');
+      return;
+    }
+
     if (!_rondaIniciada) {
       await _iniciarRonda();
       return;
@@ -163,48 +172,68 @@ class _RondinAfueraState extends State<RondinAfuera> {
     setState(() => _cargando = true);
 
     try {
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 5),
-      );
+      // Verificar servicio habilitado para usar el GPS
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _cargando = false);
+        _mostrarError('Activa la ubicación para registrar el punto');
+        await Geolocator.openLocationSettings();
+        return;
+      }
 
-      // Verifica si está cerca de algún checkpoint
+      // Obtener ubicación con fallback y manejo de timeout
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+        timeLimit: const Duration(seconds: 8),
+      ).catchError((_) => null);
+
+      if (position == null) {
+        setState(() => _cargando = false);
+        _mostrarError('No se pudo obtener la ubicación');
+        return;
+      }
+
+      double lat = position.latitude;
+      double lng = position.longitude;
+
       bool estaCercaDeCheckpoint = false;
 
       for (var checkpoint in _checkpoints) {
-        final distancia = Geolocator.distanceBetween(
-          position.latitude,
-          position.longitude,
-          checkpoint['latitud'],
-          checkpoint['longitud'],
-        );
+        final cpLat = (checkpoint['latitud'] as num?)?.toDouble();
+        final cpLng = (checkpoint['longitud'] as num?)?.toDouble();
+
+        if (cpLat == null || cpLng == null) continue;
+
+        final distancia = Geolocator.distanceBetween(lat, lng, cpLat, cpLng);
 
         if (distancia <= _distanciaPermitida) {
-          //todo: cambiar a que se conecte a la base de datos la distancia permitida
           estaCercaDeCheckpoint = true;
           break;
         }
       }
 
-      // Guardar con validación
+      // Guardar coordenada
       await _rondasRepo.registrarCoordenada(
         idRondaUsuario: _idRondaUsuario!,
-        latitud: position.latitude,
-        longitud: position.longitude,
+        latitud: lat,
+        longitud: lng,
         esValido: estaCercaDeCheckpoint,
       );
 
-      if (estaCercaDeCheckpoint) {
-        _mostrarMensaje(' Checkpoint verificado', Colors.green);
-      } else {
-        _mostrarMensaje(' No estás cerca de ningún checkpoint', Colors.orange);
-      }
-
       await _recargarCoordenadas();
       setState(() => _cargando = false);
+
+      _mostrarMensaje(
+        estaCercaDeCheckpoint
+            ? 'Checkpoint verificado'
+            : 'No estás cerca de ningún checkpoint',
+        estaCercaDeCheckpoint ? Colors.green : Colors.orange,
+      );
+
+      _iniciarCooldown();
     } catch (e) {
       setState(() => _cargando = false);
-      _mostrarError('No se pudo obtener la ubicación');
+      _mostrarError('Error al registrar el punto: $e');
     }
   }
 
@@ -259,9 +288,10 @@ class _RondinAfueraState extends State<RondinAfuera> {
       final userSession = Provider.of<UserSession>(context, listen: false);
       userSession.finalizarRonda();
 
+      _resetearCooldown();
+
       setState(() => _cargando = false);
 
-      // Mostrar resumen
       _mostrarDialogoResumen();
     } catch (e) {
       setState(() => _cargando = false);
@@ -278,7 +308,7 @@ class _RondinAfueraState extends State<RondinAfuera> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('🎉 Ronda Completada'),
+        title: const Text('Ronda Completada'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,14 +326,31 @@ class _RondinAfueraState extends State<RondinAfuera> {
         actions: [
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Cerrar diálogo
-              Navigator.pop(context); // Volver a opciones
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             child: const Text('Aceptar'),
           ),
         ],
       ),
     );
+  }
+
+  void _iniciarCooldown() {
+    _cooldownTimer?.cancel();
+    setState(() => _cooldownRestante = 10);
+
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() => _cooldownRestante--);
+      if (_cooldownRestante <= 0) {
+        timer.cancel();
+      }
+    });
+  }
+
+  void _resetearCooldown() {
+    _cooldownTimer?.cancel();
+    setState(() => _cooldownRestante = 0);
   }
 
   @override
@@ -331,7 +378,7 @@ class _RondinAfueraState extends State<RondinAfuera> {
                     children: [
                       SizedBox(height: size.height * 0.2),
 
-                      // Botón principal (marcar punto)
+                      // Botón: marcar punto / iniciar ronda
                       Align(
                         alignment: Alignment.topCenter,
                         child: GestureDetector(
@@ -342,15 +389,12 @@ class _RondinAfueraState extends State<RondinAfuera> {
 
                       SizedBox(height: size.height * 0.03),
 
-                      // Información de checkpoints
                       _infoCheckpoints(),
 
                       SizedBox(height: size.height * 0.03),
 
-                      // Lista de puntos registrados
                       Expanded(child: _listaPuntosRegistrados()),
 
-                      // Botones de acción
                       _botonesAccion(size),
                     ],
                   ),
@@ -358,7 +402,6 @@ class _RondinAfueraState extends State<RondinAfuera> {
               ),
             ),
 
-            // Overlay de carga
             if (_cargando)
               Container(
                 color: Colors.black54,
@@ -562,35 +605,55 @@ class _RondinAfueraState extends State<RondinAfuera> {
   }
 
   Container _botondeiniciar(Size size) {
+    final estaCooldown = _cooldownRestante > 0;
+
     return Container(
       height: size.height * 0.25,
       width: size.height * 0.25,
       decoration: BoxDecoration(
-        color: Colors.blue[300],
+        color: estaCooldown ? Colors.grey[400] : Colors.blue[300],
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.shade500,
+            color: estaCooldown ? Colors.grey.shade500 : Colors.blue.shade500,
             offset: const Offset(5, 5),
             blurRadius: 15,
             spreadRadius: 1,
           ),
         ],
         gradient: LinearGradient(
-          colors: [Colors.blue.shade200, Colors.blue.shade700],
+          colors: estaCooldown
+              ? [Colors.grey.shade300, Colors.grey.shade600]
+              : [Colors.blue.shade200, Colors.blue.shade700],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: Center(
-        child: Text(
-          _rondaIniciada ? 'Marcar\nPunto' : 'Iniciar\nRonda',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _rondaIniciada ? 'Marcar\nPunto' : 'Iniciar\nRonda',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            if (estaCooldown) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${_cooldownRestante}s',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -604,10 +667,7 @@ class _RondinAfueraState extends State<RondinAfuera> {
           SizedBox(
             height: size.height * 0.1,
             width: size.width * 0.5,
-            child: Image.network(
-              'https://upload.wikimedia.org/wikipedia/commons/c/ca/TSJZapopan_Logo.jpg',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/logo.jpg', fit: BoxFit.cover),
           ),
           SizedBox(
             height: size.height * 0.1,
@@ -664,5 +724,11 @@ class _RondinAfueraState extends State<RondinAfuera> {
 
   void _mostrarError(String mensaje) {
     _mostrarMensaje(mensaje, Colors.red);
+  }
+
+  @override
+  void dispose() {
+    _cooldownTimer?.cancel();
+    super.dispose();
   }
 }

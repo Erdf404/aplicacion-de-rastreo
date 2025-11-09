@@ -1,5 +1,4 @@
 // Servicio para manejar la sesión del usuario actual
-// Usa ChangeNotifier para notificar cambios a los widgets
 
 import 'package:flutter/foundation.dart';
 
@@ -14,11 +13,8 @@ class UserSession extends ChangeNotifier {
   // Datos de la ronda activa (si hay una en curso)
   int? _idRondaUsuarioActiva;
   int? _idRondaAsignadaActiva;
-  String? _tipoRondaActiva; // 'interior' o 'exterior'
+  String? _tipoRondaActiva;
   bool _rondaEnCurso = false;
-
-  // ============================================================================
-  // GETTERS
 
   int? get idUsuario => _idUsuario;
   String? get nombre => _nombre;
@@ -32,9 +28,6 @@ class UserSession extends ChangeNotifier {
   bool get rondaEnCurso => _rondaEnCurso;
 
   bool get isLoggedIn => _idUsuario != null;
-
-  // ============================================================================
-  // MÉTODOS DE SESIÓN
 
   // Iniciar sesión con datos del usuario
   void iniciarSesion({
@@ -63,14 +56,11 @@ class UserSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ============================================================================
-  // MÉTODOS DE RONDA ACTIVA
-
   // Iniciar una ronda
   void iniciarRonda({
     required int idRondaUsuario,
     required int idRondaAsignada,
-    required String tipoRonda, // 'interior' o 'exterior'
+    required String tipoRonda,
   }) {
     _idRondaUsuarioActiva = idRondaUsuario;
     _idRondaAsignadaActiva = idRondaAsignada;
@@ -93,18 +83,14 @@ class UserSession extends ChangeNotifier {
     _rondaEnCurso = false;
   }
 
-  // ============================================================================
-
-  // Obtener nombre corto (primera palabra)
+  // Obtener primer nombre del usuario
   String get nombreCorto {
     if (_nombre == null) return 'Usuario';
     return _nombre!.split(' ').first;
   }
 
-  // Verificar si es administrador (ejemplo)
   bool get esAdmin => _idTipo == 1;
 
-  // Debug
   @override
   String toString() {
     return 'UserSession(id: $_idUsuario, nombre: $_nombre, rondaEnCurso: $_rondaEnCurso)';

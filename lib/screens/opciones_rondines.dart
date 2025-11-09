@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/user_session.dart';
-import '../services/sync_service.dart.dart';
+import '../services/sync_service.dart';
 import '../database/database_helper.dart';
 import '/database/repositories/consultas_repository.dart';
 
@@ -137,7 +137,7 @@ class _OpcionesRondinesState extends State<OpcionesRondines> {
                   ),
                 ),
                 onPressed: () {
-                  // Verifica si hay rondas pendientes
+                  // Verificar si hay rondas pendientes
                   if (_estadisticas != null &&
                       _estadisticas!['rondas_pendientes'] > 0) {
                     Navigator.pushNamed(context, 'seleccion_ronda');
@@ -252,10 +252,7 @@ class _OpcionesRondinesState extends State<OpcionesRondines> {
           SizedBox(
             height: size.height * 0.1,
             width: size.width * 0.5,
-            child: Image.network(
-              'https://upload.wikimedia.org/wikipedia/commons/c/ca/TSJZapopan_Logo.jpg',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/logo.jpg', fit: BoxFit.cover),
           ),
           SizedBox(
             height: size.height * 0.1,
@@ -319,26 +316,25 @@ class _OpcionesRondinesState extends State<OpcionesRondines> {
   Future<void> _sincronizarRondas() async {
     final userSession = Provider.of<UserSession>(context, listen: false);
 
-    // Mostrar loading
+    // Mostrar loading de carga
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    // Sincronizar
     final syncService = SyncService();
     final resultado = await syncService.sincronizarRondasPendientes(
       userSession.idUsuario!,
     );
 
     if (mounted) {
-      Navigator.pop(context); // Cerrar loading
+      Navigator.pop(context);
 
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(resultado['success'] ? '✅ Éxito' : '⚠️ Atención'),
+          title: Text(resultado['success'] ? 'Éxito' : 'Atención'),
           content: Text(resultado['message']),
           actions: [
             TextButton(
@@ -355,8 +351,8 @@ class _OpcionesRondinesState extends State<OpcionesRondines> {
     BuildContext context,
     UserSession userSession,
   ) async {
-    // Siempre borrar datos de la nube al cerrar sesión
-    // para que el siguiente usuario no vea rondas ajenas
+    //borrar datos asignados al cerrar sesión
+
     await DatabaseHelper().borrarDatosNube();
 
     // Preguntar si también borrar las rondas ejecutadas localmente
@@ -366,7 +362,7 @@ class _OpcionesRondinesState extends State<OpcionesRondines> {
         title: const Text('Cerrar Sesión'),
         content: const Text(
           '¿Deseas eliminar también las rondas que realizaste?\n\n'
-          '⚠️ Si no las eliminas, deberás sincronizarlas con el servidor.',
+          'Si no las eliminas, deberás sincronizarlas con el servidor.',
         ),
         actions: [
           TextButton(

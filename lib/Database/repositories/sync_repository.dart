@@ -9,17 +9,14 @@ class SyncRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   // IMPORTAR TODOS LOS DATOS DESDE JSON
-  // ============================================================================
+
   // Este método recibe el JSON completo desde la nube y lo guarda en la BD local
-  // Parámetro: jsonData - El JSON parseado con toda la información del usuario
-  // Retorna: true si todo se guardó correctamente, false si hubo error
 
   Future<bool> importarDatosDesdeNube(Map<String, dynamic> jsonData) async {
     final db = await _dbHelper.database;
 
     try {
-      // Usar transacción para garantizar que todo se guarde o nada
-      // Si algo falla, se hace rollback automáticamente
+      await _dbHelper.borrarDatosNube();
       await db.transaction((txn) async {
         // 1. Guardar tipo de usuario
         if (jsonData['usuario']?['tipo_usuario'] != null) {
@@ -29,8 +26,7 @@ class SyncRepository {
           await txn.insert(
             'tipos_de_usuarios',
             tipoUsuario.toMap(),
-            conflictAlgorithm:
-                ConflictAlgorithm.replace, // Reemplaza si ya existe
+            conflictAlgorithm: ConflictAlgorithm.replace,
           );
         }
 
@@ -57,40 +53,39 @@ class SyncRepository {
           }
         }
 
-        // 4. Guardar coordenadas admin y sus QR
+        // 4. Guardar coordenadas admin
         if (jsonData['coordenadas_admin'] != null) {
           final List<dynamic> coordenadas = jsonData['coordenadas_admin'];
+
           for (var coordJson in coordenadas) {
-            // Guardar coordenada
-            final coordenada = CoordenadaAdmin.fromJson(coordJson);
-
-            await txn.rawInsert(
-              '''
-      INSERT OR REPLACE INTO Coordenadas_admin 
-      (id_coordenada_admin, latitud, longitud, nombre_coordenada)
-      VALUES (?, ?, ?, ?)
-    ''',
-              [
-                coordenada.idCoordenadaAdmin,
-                coordenada.latitud,
-                coordenada.longitud,
-                coordenada.nombreCoordenada,
-              ],
-            );
-
-            if (coordJson['qr'] != null &&
-                coordJson['qr']['codigo_qr'] != null) {
-              final qr = Qr(
-                idCoordenadaAdmin: coordenada.idCoordenadaAdmin,
-                codigoQr: coordJson['qr']['codigo_qr'] as String?,
+            try {
+              final coordenada = CoordenadaAdmin(
+                idCoordenadaAdmin: coordJson['id_coordenada_admin'],
+                latitud: coordJson['latitud'] != null
+                    ? (coordJson['latitud'] as num).toDouble()
+                    : null,
+                longitud: coordJson['longitud'] != null
+                    ? (coordJson['longitud'] as num).toDouble()
+                    : null,
+                nombreCoordenada: coordJson['nombre_coordenada'] ?? '',
+                codigoQr: coordJson['codigo_qr'],
               );
-              await txn.insert(
-                'Qr',
-                qr.toMap(),
-                conflictAlgorithm: ConflictAlgorithm.replace,
+
+              await txn.insert('Coordenadas_admin', {
+                'id_coordenada_admin': coordenada.idCoordenadaAdmin,
+                'latitud': coordenada.latitud,
+                'longitud': coordenada.longitud,
+                'nombre_coordenada': coordenada.nombreCoordenada,
+                'codigo_qr': coordenada.codigoQr,
+              }, conflictAlgorithm: ConflictAlgorithm.replace);
+            } catch (e) {
+              print(
+                'Error guardando coordenada ${coordJson['id_coordenada_admin']}: $e',
               );
             }
           }
+
+          print('Coordenadas Admin guardadas correctamente');
         }
 
         // 5. Guardar rondas asignadas y sus coordenadas
@@ -105,41 +100,46 @@ class SyncRepository {
           print('Filtrando rondas: $fechaHoy y $fechaManana');
 
           for (var rondaJson in rondasAsignadas) {
-            // Guardar ronda asignada
-            final ronda = RondaAsignada.fromJson(rondaJson);
+            try {
+              print('Procesando ronda: ${rondaJson['id_ronda_asignada']}');
+              print('Ronda JSON completo: $rondaJson');
+              final ronda = RondaAsignada.fromJson(rondaJson);
 
-            if (ronda.fechaDeEjecucion == fechaHoy ||
-                ronda.fechaDeEjecucion == fechaManana) {
-              await txn.insert(
-                'Ronda_asignada',
-                ronda.toMap(),
-                conflictAlgorithm: ConflictAlgorithm.replace,
-              );
+              if (ronda.fechaDeEjecucion == fechaHoy ||
+                  ronda.fechaDeEjecucion == fechaManana) {
+                await txn.insert(
+                  'Ronda_asignada',
+                  ronda.toMap(),
+                  conflictAlgorithm: ConflictAlgorithm.replace,
+                );
 
-              // Guardar coordenadas de esta ronda (tabla intermedia)
-              if (rondaJson['coordenadas'] != null) {
-                final List<dynamic> coordenadas = rondaJson['coordenadas'];
-                for (var coordJson in coordenadas) {
-                  final rondaCoordenada = RondaCoordenada(
-                    idRondaAsignada: ronda.idRondaAsignada,
-                    idCoordenadaAdmin: coordJson['id_coordenada_admin'] as int,
-                    orden: coordJson['orden'] as int,
-                  );
-                  await txn.insert(
-                    'ronda_coordenadas',
-                    rondaCoordenada.toMap(),
-                    conflictAlgorithm: ConflictAlgorithm.replace,
-                  );
+                if (rondaJson['coordenadas'] != null) {
+                  final List<dynamic> coordenadas = rondaJson['coordenadas'];
+                  for (var coordJson in coordenadas) {
+                    final rondaCoordenada = RondaCoordenada(
+                      idRondaAsignada: ronda.idRondaAsignada,
+                      idCoordenadaAdmin:
+                          coordJson['id_coordenada_admin'] as int,
+                      orden: coordJson['orden'] as int,
+                    );
+                    await txn.insert(
+                      'ronda_coordenadas',
+                      rondaCoordenada.toMap(),
+                      conflictAlgorithm: ConflictAlgorithm.replace,
+                    );
+                  }
                 }
-              }
 
-              print(
-                'Ronda ${ronda.idRondaAsignada} guardada - ${ronda.fechaDeEjecucion}',
-              );
-            } else {
-              print(
-                'Ronda ${ronda.idRondaAsignada} ignorada - ${ronda.fechaDeEjecucion}',
-              );
+                print(
+                  'Ronda ${ronda.idRondaAsignada} guardada - ${ronda.fechaDeEjecucion}',
+                );
+              } else {
+                print(
+                  'Ronda ${ronda.idRondaAsignada} ignorada - ${ronda.fechaDeEjecucion}',
+                );
+              }
+            } catch (e) {
+              print('Error al guardar ronda: $e');
             }
           }
         }
@@ -147,14 +147,10 @@ class SyncRepository {
 
       return true;
     } catch (e) {
-      // Si algo falló, imprime el error y retorna false
       print('Error al importar datos: $e');
       return false;
     }
   }
-
-  // VERIFICAR SI EXISTEN DATOS LOCALES
-  // Útil para saber si el usuario ya descargó datos anteriormente
 
   Future<bool> tienesDatosLocales() async {
     final db = await _dbHelper.database;
@@ -164,8 +160,7 @@ class SyncRepository {
     return result.isNotEmpty;
   }
 
-  // ============================================================================
-  // Obtiene los datos del usuario guardados localmente
+  // Obtener los datos del usuario guardados localmente
 
   Future<Usuario?> obtenerUsuarioLocal(int idUsuario) async {
     final db = await _dbHelper.database;
