@@ -9,13 +9,10 @@ class SyncService {
 
   static const String _baseUrl = 'https://api-sistema-rondas.onrender.com/api';
 
-  /// Sube todas las rondas ejecutadas localmente que no se han sincronizado
-  /// Retorna: cantidad de rondas sincronizadas exitosamente
   Future<Map<String, dynamic>> sincronizarRondasPendientes(
     int idUsuario,
   ) async {
     try {
-      // Obtener SOLO las NO sincronizadas
       final rondas = await _rondasRepo.obtenerRondasNoSincronizadas(idUsuario);
 
       if (rondas.isEmpty) {
@@ -42,7 +39,6 @@ class SyncService {
           final exito = await _subirRondaAlServidor(detalle);
 
           if (exito) {
-            //Marcar como sincronizada en BD local
             await _rondasRepo.marcarRondaSincronizada(ronda.idRondaUsuario!);
             sincronizadas++;
           } else {
@@ -73,7 +69,6 @@ class SyncService {
 
   Future<bool> _subirRondaAlServidor(Map<String, dynamic> ronda) async {
     try {
-      // Preparar datos para enviar
       final payload = {
         'id_ronda_usuario': ronda['id_ronda_usuario'],
         'id_usuario': ronda['id_usuario'],
@@ -81,7 +76,7 @@ class SyncService {
         'fecha': ronda['fecha'],
         'hora_inicio': ronda['hora_inicio'],
         'hora_final': ronda['hora_final'],
-        'coordenadas': ronda['coordenadas'], // Lista de coordenadas
+        'coordenadas': ronda['coordenadas'],
       };
 
       final response = await http
@@ -94,12 +89,9 @@ class SyncService {
 
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      print('Error al subir ronda: $e');
       return false;
     }
   }
-
-  // verificar si hay conexión
 
   Future<bool> tieneConexion() async {
     try {
@@ -113,7 +105,6 @@ class SyncService {
     }
   }
 
-  /// Intenta sincronizar automáticamente cuando hay conexión
   Future<void> intentarSincronizacionAutomatica(int idUsuario) async {
     if (await tieneConexion()) {
       await sincronizarRondasPendientes(idUsuario);

@@ -1,16 +1,12 @@
-// Servicio para manejar la sesión del usuario actual
-
 import 'package:flutter/foundation.dart';
 
 class UserSession extends ChangeNotifier {
-  // Datos del usuario actual
   int? _idUsuario;
   String? _nombre;
   String? _correo;
   int? _idTipo;
   String? _nombreTipoUsuario;
 
-  // Datos de la ronda activa (si hay una en curso)
   int? _idRondaUsuarioActiva;
   int? _idRondaAsignadaActiva;
   String? _tipoRondaActiva;
@@ -29,7 +25,6 @@ class UserSession extends ChangeNotifier {
 
   bool get isLoggedIn => _idUsuario != null;
 
-  // Iniciar sesión con datos del usuario
   void iniciarSesion({
     required int idUsuario,
     required String nombre,
@@ -45,7 +40,6 @@ class UserSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Cerrar sesión
   void cerrarSesion() {
     _idUsuario = null;
     _nombre = null;
@@ -56,7 +50,6 @@ class UserSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Iniciar una ronda
   void iniciarRonda({
     required int idRondaUsuario,
     required int idRondaAsignada,
@@ -69,13 +62,11 @@ class UserSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Finalizar la ronda activa
   void finalizarRonda() {
     _limpiarRondaActiva();
     notifyListeners();
   }
 
-  // Limpiar datos de ronda activa
   void _limpiarRondaActiva() {
     _idRondaUsuarioActiva = null;
     _idRondaAsignadaActiva = null;
@@ -83,16 +74,10 @@ class UserSession extends ChangeNotifier {
     _rondaEnCurso = false;
   }
 
-  // Obtener primer nombre del usuario
   String get nombreCorto {
     if (_nombre == null) return 'Usuario';
     return _nombre!.split(' ').first;
   }
 
   bool get esAdmin => _idTipo == 1;
-
-  @override
-  String toString() {
-    return 'UserSession(id: $_idUsuario, nombre: $_nombre, rondaEnCurso: $_rondaEnCurso)';
-  }
 }

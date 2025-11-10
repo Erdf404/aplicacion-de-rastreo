@@ -1,12 +1,8 @@
-// Servicio de autenticación que maneja login y sincronización con la nube
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../database/database_helper.dart';
 import '../database/repositories/sync_repository.dart';
 import 'user_session.dart';
-import 'dart:io';
-import 'dart:convert';
 
 class AuthService {
   final SyncRepository _syncRepo = SyncRepository();
@@ -19,7 +15,6 @@ class AuthService {
     required UserSession userSession,
   }) async {
     try {
-      // 1. Hacer petición al backend
       final response = await http
           .post(
             Uri.parse('$_baseUrl/login'),
@@ -33,18 +28,9 @@ class AuthService {
             },
           );
 
-      // 2. Verificar respuesta del servidor
       if (response.statusCode == 200) {
         final Map<String, dynamic> datosUsuario = jsonDecode(response.body);
-        //borrar al final estas dos lineas
-        final jsonString = const JsonEncoder.withIndent(
-          '  ',
-        ).convert(datosUsuario);
-        print('📦 JSON INICIO ===================');
-        print(jsonString);
-        print('📦 JSON FIN ======================');
 
-        // 3. Validar que el JSON tenga la estructura correcta
         if (!_validarEstructuraJSON(datosUsuario)) {
           return {
             'success': false,
@@ -52,7 +38,6 @@ class AuthService {
           };
         }
 
-        // 4. Guardar datos en la base de datos local
         final guardadoExitoso = await _syncRepo.importarDatosDesdeNube(
           datosUsuario,
         );
@@ -64,7 +49,6 @@ class AuthService {
           };
         }
 
-        // 5. Actualizar sesión del usuario
         final usuario = datosUsuario['usuario'];
         userSession.iniciarSesion(
           idUsuario: usuario['id_usuario'],
@@ -84,7 +68,6 @@ class AuthService {
         };
       }
     } catch (e) {
-      print('Error en login: $e');
       return {
         'success': false,
         'message': 'Error de conexión: ${e.toString()}',
@@ -92,8 +75,6 @@ class AuthService {
     }
   }
 
-  /// Cierre de sesión
-  /// Si borrarDatos es true, elimina toda la información local
   Future<void> logout({
     required UserSession userSession,
     bool borrarDatos = false,
@@ -106,7 +87,6 @@ class AuthService {
     userSession.cerrarSesion();
   }
 
-  /// Valida que el JSON tenga la estructura esperada
   bool _validarEstructuraJSON(Map<String, dynamic> json) {
     return json.containsKey('usuario') &&
         json['usuario'].containsKey('id_usuario') &&
@@ -115,12 +95,10 @@ class AuthService {
         json.containsKey('rondas_asignadas');
   }
 
-  /// Verifica si hay datos guardados localmente
   Future<bool> hayDatosLocales() async {
     return await _syncRepo.tienesDatosLocales();
   }
 
-  /// Sincronizar datos (actualizar desde la nube)
   Future<bool> sincronizarDatos({
     required String correo,
     required String contrasena,
@@ -139,7 +117,6 @@ class AuthService {
 
       return false;
     } catch (e) {
-      print('Error al sincronizar: $e');
       return false;
     }
   }

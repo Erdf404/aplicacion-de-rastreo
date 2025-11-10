@@ -1,12 +1,9 @@
-// Repositorio para manejar las rondas de los usuarios
 import 'package:sqflite/sqflite.dart';
 import '../database_helper.dart';
 import '../modelos.dart';
 
 class RondasRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper();
-
-  // Crea un registro de ronda cuando el usuario inicia una ronda asignada
 
   Future<int> iniciarRonda({
     required int idUsuario,
@@ -15,19 +12,16 @@ class RondasRepository {
   }) async {
     final db = await _dbHelper.database;
 
-    // Crear objeto RondaUsuario
     final ronda = RondaUsuario(
       idUsuario: idUsuario,
       idRondaAsignada: idRondaAsignada,
-      fecha: _formatearFecha(fechaHoraInicio), // "2025-10-14"
-      horaInicio: _formatearFechaHora(fechaHoraInicio), // "2025-10-14T22:00:00"
+      fecha: _formatearFecha(fechaHoraInicio),
+      horaInicio: _formatearFechaHora(fechaHoraInicio),
       horaFinal: '',
     );
 
     return await db.insert('rondas_usuarios', ronda.toMap());
   }
-
-  // Actualiza la hora final cuando el usuario completa una ronda
 
   Future<bool> finalizarRonda({
     required int idRondaUsuario,
@@ -45,12 +39,9 @@ class RondasRepository {
 
       return rowsAffected > 0;
     } catch (e) {
-      print('Error al finalizar ronda: $e');
       return false;
     }
   }
-
-  // Registra una coordenada del usuario durante la ronda
 
   Future<int> registrarCoordenada({
     required int idRondaUsuario,
@@ -88,9 +79,6 @@ class RondasRepository {
     return result.first['id_coordenada_admin'] as int;
   }
 
-  // Verifica si el QR escaneado pertenece a la ronda asignada actual
-  // Retorna: true si el QR es parte de esta ronda
-
   Future<bool> verificarQrEnRondaAsignada({
     required int idRondaAsignada,
     required int idCoordenadaAdmin,
@@ -106,9 +94,6 @@ class RondasRepository {
 
     return result.isNotEmpty;
   }
-
-  // Obtiene todas las rondas ejecutadas por un usuario
-  // usado para mostrar el historial de rondas
 
   Future<List<RondaUsuario>> obtenerRondasUsuario(int idUsuario) async {
     final db = await _dbHelper.database;
@@ -138,13 +123,9 @@ class RondasRepository {
     return result.map((map) => CoordenadaUsuario.fromMap(map)).toList();
   }
 
-  // Obtiene informacion completa de una ronda con su tipo
-  // Retorna un Map con toda la informacion combinada
-
   Future<Map<String, dynamic>?> obtenerDetalleRonda(int idRondaUsuario) async {
     final db = await _dbHelper.database;
 
-    // Query con JOIN para obtener informacion completa
     final result = await db.rawQuery(
       '''
       SELECT 
@@ -166,8 +147,6 @@ class RondasRepository {
     return result.first;
   }
 
-  // conteo de checkpoints verificados en una ronda de usuario
-
   Future<int> contarCheckpointsVerificados(int idRondaUsuario) async {
     final db = await _dbHelper.database;
 
@@ -183,16 +162,12 @@ class RondasRepository {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  // Obtiene las coordenadas que faltan por verificar en una ronda
-  // Compara las coordenadas de la ronda asignada vs las ya verificadas
-
   Future<List<Map<String, dynamic>>> obtenerCheckpointsPendientes({
     required int idRondaAsignada,
     required int idRondaUsuario,
   }) async {
     final db = await _dbHelper.database;
 
-    // Query: coordenadas asignadas que NO han sido verificadas
     final result = await db.rawQuery(
       '''
       SELECT 
@@ -219,17 +194,14 @@ class RondasRepository {
     return result;
   }
 
-  // Formatea DateTime a "2025-10-14"
   String _formatearFecha(DateTime fecha) {
     return '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
   }
 
-  // Formatea DateTime a formato ISO8601: "2025-10-14T22:30:00"
   String _formatearFechaHora(DateTime fecha) {
     return '${_formatearFecha(fecha)}T${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}:${fecha.second.toString().padLeft(2, '0')}';
   }
 
-  // Marca una ronda como sincronizada
   Future<bool> marcarRondaSincronizada(int idRondaUsuario) async {
     final db = await _dbHelper.database;
 
@@ -242,12 +214,10 @@ class RondasRepository {
       );
       return rowsAffected > 0;
     } catch (e) {
-      print('Error al marcar ronda como sincronizada: $e');
       return false;
     }
   }
 
-  //Obtener SOLO rondas NO sincronizadas
   Future<List<RondaUsuario>> obtenerRondasNoSincronizadas(int idUsuario) async {
     final db = await _dbHelper.database;
 

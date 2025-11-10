@@ -1,5 +1,3 @@
-// Repositorio encargado de sincronizar datos entre la nube y la base de datos local
-
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/intl.dart';
 import '../database_helper.dart';
@@ -8,17 +6,12 @@ import '../modelos.dart';
 class SyncRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  // IMPORTAR TODOS LOS DATOS DESDE JSON
-
-  // Este método recibe el JSON completo desde la nube y lo guarda en la BD local
-
   Future<bool> importarDatosDesdeNube(Map<String, dynamic> jsonData) async {
     final db = await _dbHelper.database;
 
     try {
       await _dbHelper.borrarDatosNube();
       await db.transaction((txn) async {
-        // 1. Guardar tipo de usuario
         if (jsonData['usuario']?['tipo_usuario'] != null) {
           final tipoUsuario = TipoUsuario.fromJson(
             jsonData['usuario']['tipo_usuario'],
@@ -30,7 +23,6 @@ class SyncRepository {
           );
         }
 
-        // 2. Guardar usuario
         if (jsonData['usuario'] != null) {
           final usuario = Usuario.fromJson(jsonData['usuario']);
           await txn.insert(
@@ -40,7 +32,6 @@ class SyncRepository {
           );
         }
 
-        // 3. Guardar tipos de ronda
         if (jsonData['tipos_ronda'] != null) {
           final List<dynamic> tiposRonda = jsonData['tipos_ronda'];
           for (var tipoJson in tiposRonda) {
@@ -53,7 +44,6 @@ class SyncRepository {
           }
         }
 
-        // 4. Guardar coordenadas admin
         if (jsonData['coordenadas_admin'] != null) {
           final List<dynamic> coordenadas = jsonData['coordenadas_admin'];
 
@@ -79,16 +69,12 @@ class SyncRepository {
                 'codigo_qr': coordenada.codigoQr,
               }, conflictAlgorithm: ConflictAlgorithm.replace);
             } catch (e) {
-              print(
-                'Error guardando coordenada ${coordJson['id_coordenada_admin']}: $e',
-              );
+              // Error guardando coordenada individual, continuar con las demás
+              continue;
             }
           }
-
-          print('Coordenadas Admin guardadas correctamente');
         }
 
-        // 5. Guardar rondas asignadas y sus coordenadas
         if (jsonData['rondas_asignadas'] != null) {
           final List<dynamic> rondasAsignadas = jsonData['rondas_asignadas'];
 
@@ -97,12 +83,8 @@ class SyncRepository {
           final fechaHoy = DateFormat('yyyy-MM-dd').format(hoy);
           final fechaManana = DateFormat('yyyy-MM-dd').format(manana);
 
-          print('Filtrando rondas: $fechaHoy y $fechaManana');
-
           for (var rondaJson in rondasAsignadas) {
             try {
-              print('Procesando ronda: ${rondaJson['id_ronda_asignada']}');
-              print('Ronda JSON completo: $rondaJson');
               final ronda = RondaAsignada.fromJson(rondaJson);
 
               if (ronda.fechaDeEjecucion == fechaHoy ||
@@ -129,17 +111,10 @@ class SyncRepository {
                     );
                   }
                 }
-
-                print(
-                  'Ronda ${ronda.idRondaAsignada} guardada - ${ronda.fechaDeEjecucion}',
-                );
-              } else {
-                print(
-                  'Ronda ${ronda.idRondaAsignada} ignorada - ${ronda.fechaDeEjecucion}',
-                );
               }
             } catch (e) {
-              print('Error al guardar ronda: $e');
+              // Error guardando ronda individual, continuar con las demás
+              continue;
             }
           }
         }
@@ -147,7 +122,6 @@ class SyncRepository {
 
       return true;
     } catch (e) {
-      print('Error al importar datos: $e');
       return false;
     }
   }
@@ -155,12 +129,9 @@ class SyncRepository {
   Future<bool> tienesDatosLocales() async {
     final db = await _dbHelper.database;
 
-    // Verifica si hay al menos un usuario guardado
     final result = await db.query('usuarios', limit: 1);
     return result.isNotEmpty;
   }
-
-  // Obtener los datos del usuario guardados localmente
 
   Future<Usuario?> obtenerUsuarioLocal(int idUsuario) async {
     final db = await _dbHelper.database;
@@ -176,18 +147,11 @@ class SyncRepository {
     return Usuario.fromMap(result.first);
   }
 
-  // Borra datos obtenidos de la nube y los vuelve a descargar
-  // Mantiene las rondas ejecutadas localmente y no las borra ni modifica
-
   Future<bool> actualizarDatosNube(Map<String, dynamic> jsonData) async {
     try {
-      // Primero borra datos de la nube (no borra rondas_usuarios)
       await _dbHelper.borrarDatosNube();
-
-      // Luego importa los nuevos datos
       return await importarDatosDesdeNube(jsonData);
     } catch (e) {
-      print('Error al actualizar datos: $e');
       return false;
     }
   }
