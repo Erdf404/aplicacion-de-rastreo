@@ -631,7 +631,6 @@ class ListadoRondinesState extends State<ListadoRondines> {
       final bytes = await pdf.save();
       await rutaArchivo.writeAsBytes(bytes);
 
-      // Mostrar ruta donde se guardó el PDF generado
       print('PDF guardado en: ${rutaArchivo.path}');
     } catch (e) {
       rethrow;

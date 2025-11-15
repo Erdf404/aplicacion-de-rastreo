@@ -230,4 +230,26 @@ class RondasRepository {
 
     return result.map((map) => RondaUsuario.fromMap(map)).toList();
   }
+
+  Future<bool> eliminarRonda(int idRondaUsuario) async {
+    final db = await _dbHelper.database;
+
+    try {
+      await db.delete(
+        'coordenadas_usuarios',
+        where: 'id_ronda_usuario = ?',
+        whereArgs: [idRondaUsuario],
+      );
+
+      final rowsAffected = await db.delete(
+        'rondas_usuarios',
+        where: 'id_ronda_usuario = ?',
+        whereArgs: [idRondaUsuario],
+      );
+
+      return rowsAffected > 0;
+    } catch (e) {
+      return false;
+    }
+  }
 }

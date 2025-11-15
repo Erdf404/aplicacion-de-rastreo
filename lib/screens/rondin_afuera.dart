@@ -586,11 +586,13 @@ class _RondinAfueraState extends State<RondinAfuera> {
             color: const Color.fromARGB(255, 198, 20, 59),
             onPressed: () async {
               if (_rondaIniciada) {
+                // Si hay ronda activa, mostrar el diálogo de confirmación
                 final salir = await _confirmarSalida();
                 if (salir == true && mounted) {
                   Navigator.pop(context);
                 }
               } else {
+                // Si no hay ronda activa, solo regresar
                 Navigator.pop(context);
               }
             },
@@ -703,7 +705,23 @@ class _RondinAfueraState extends State<RondinAfuera> {
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () async {
+              if (_idRondaUsuario != null) {
+                await _rondasRepo.eliminarRonda(_idRondaUsuario!);
+              }
+
+              final userSession = Provider.of<UserSession>(
+                context,
+                listen: false,
+              );
+              userSession.finalizarRonda();
+
+              _resetearCooldown();
+
+              if (mounted) {
+                Navigator.pop(context, true);
+              }
+            },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Salir'),
           ),

@@ -655,7 +655,21 @@ class _RondinInteriorState extends State<RondinInterior> {
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () async {
+              if (_idRondaUsuario != null) {
+                await _rondasRepo.eliminarRonda(_idRondaUsuario!);
+              }
+
+              final userSession = Provider.of<UserSession>(
+                context,
+                listen: false,
+              );
+              userSession.finalizarRonda();
+
+              if (mounted) {
+                Navigator.pop(context, true);
+              }
+            },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Salir'),
           ),
